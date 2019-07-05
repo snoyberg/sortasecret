@@ -5,3 +5,11 @@ authors = ["Michael Snoyman <michael@snoyman.com>"]
 edition = "2018"
 
 [dependencies]
+clap = "~2.33"
+ed25519-dalek = "0.9"
+rand = "0.6"
+sha2 = "0.8"
+
+[dev-dependencies]
+quickcheck = "0.8"
+quickcheck_macros = "0.8"
