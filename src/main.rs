@@ -6,10 +6,18 @@ extern crate quickcheck_macros;
 
 mod cli;
 mod genkey;
+mod keypair;
 
-fn main() {
+#[derive(Debug)]
+enum Error {
+    GenKey(keypair::Error)
+}
+
+fn main() -> Result<(), Error> {
     use cli::Command::*;
     match cli::parse_command() {
-        GenKey => genkey::run(),
+        GenKey(file) => {
+            genkey::run(file).map_err(|e| Error::GenKey(e))
+        }
     }
 }

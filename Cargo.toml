@@ -9,7 +9,9 @@ clap = "~2.33"
 ed25519-dalek = "0.9"
 rand = "0.6"
 sha2 = "0.8"
+base16 = "0.1"
 
 [dev-dependencies]
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
+tempfile = "3.1"
