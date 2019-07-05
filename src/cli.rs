@@ -6,6 +6,13 @@ use std::ffi::OsString;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     GenKey(Option<String>),
+    Server(Server),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Server {
+    pub bind: String,
+    pub keyfile: String,
 }
 
 pub fn parse_command() -> Command {
@@ -30,9 +37,29 @@ where
                          .value_name("file")
                          )
         )
+        .subcommand(SubCommand::with_name("server")
+                    .about("Launch the web server")
+                    .arg(Arg::with_name("bind")
+                         .help("Host/port to bind to, e.g. 127.0.0.1:8080")
+                         .long("bind")
+                         .value_name("bind")
+                         .required(true)
+                         )
+                    .arg(Arg::with_name("keyfile")
+                         .help("Filename to read key from")
+                         .long("keyfile")
+                         .value_name("keyfile")
+                         .required(true)
+                         )
+                    )
         .get_matches_from_safe(args)?;
     if let Some(genkey) = matches.subcommand_matches("genkey") {
         Ok(Command::GenKey(genkey.value_of("file").map(|s| s.to_string())))
+    } else if let Some(server) = matches.subcommand_matches("server") {
+        Ok(Command::Server(Server {
+            bind: server.value_of("bind").unwrap().to_string(),
+            keyfile: server.value_of("keyfile").unwrap().to_string(),
+        }))
     } else {
         panic!("This shouldn't happen {:?}", matches);
     }
@@ -76,5 +103,21 @@ mod test {
     #[quickcheck]
     fn prop_never_panics(args: Vec<String>) {
         let _ignored = parse_command_from(args.iter());
+    }
+
+    #[test]
+    fn test_server() {
+        assert_eq!(
+            parse_command_from(["exename", "server", "--bind", "foo", "--keyfile", "keyfile"].iter()).unwrap(),
+            Command::Server(Server {
+                bind: "foo".to_string(),
+                keyfile: "keyfile".to_string(),
+            }),
+        )
+    }
+
+    #[test]
+    fn test_server_incomplete() {
+        parse_command_from(["exename", "server", "--bind", "foo"].iter()).unwrap_err();
     }
 }

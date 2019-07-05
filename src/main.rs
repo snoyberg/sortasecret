@@ -1,3 +1,5 @@
+#[macro_use] extern crate serde_derive;
+
 #[cfg(test)]
 extern crate quickcheck;
 #[cfg(test)]
@@ -7,17 +9,12 @@ extern crate quickcheck_macros;
 mod cli;
 mod genkey;
 mod keypair;
+mod server;
 
-#[derive(Debug)]
-enum Error {
-    GenKey(keypair::Error)
-}
-
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), keypair::Error> {
     use cli::Command::*;
     match cli::parse_command() {
-        GenKey(file) => {
-            genkey::run(file).map_err(|e| Error::GenKey(e))
-        }
+        GenKey(file) => genkey::run(file),
+        Server(server) => server::run(server),
     }
 }
