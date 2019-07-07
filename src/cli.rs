@@ -13,6 +13,8 @@ pub enum Command {
 pub struct Server {
     pub bind: String,
     pub keyfile: String,
+    pub recaptcha_site: String,
+    pub recaptcha_secret: String,
 }
 
 pub fn parse_command() -> Command {
@@ -51,6 +53,18 @@ where
                          .value_name("keyfile")
                          .required(true)
                          )
+                    .arg(Arg::with_name("recaptcha-site")
+                         .help("Recaptcha site key")
+                         .long("recaptcha-site")
+                         .value_name("recaptcha-site")
+                         .required(true)
+                         )
+                    .arg(Arg::with_name("recaptcha-secret")
+                         .help("Recaptcha secret key")
+                         .long("recaptcha-secret")
+                         .value_name("recaptcha-secret")
+                         .required(true)
+                         )
                     )
         .get_matches_from_safe(args)?;
     if let Some(genkey) = matches.subcommand_matches("genkey") {
@@ -59,6 +73,8 @@ where
         Ok(Command::Server(Server {
             bind: server.value_of("bind").unwrap().to_string(),
             keyfile: server.value_of("keyfile").unwrap().to_string(),
+            recaptcha_site: server.value_of("recaptcha-site").unwrap().to_string(),
+            recaptcha_secret: server.value_of("recaptcha-secret").unwrap().to_string(),
         }))
     } else {
         panic!("This shouldn't happen {:?}", matches);
@@ -108,10 +124,23 @@ mod test {
     #[test]
     fn test_server() {
         assert_eq!(
-            parse_command_from(["exename", "server", "--bind", "foo", "--keyfile", "keyfile"].iter()).unwrap(),
+            parse_command_from([
+                "exename",
+                "server",
+                "--bind",
+                "foo",
+                "--keyfile",
+                "keyfile",
+                "--recaptcha-site",
+                "sitekey",
+                "--recaptcha-secret",
+                "secretkey",
+                ].iter()).unwrap(),
             Command::Server(Server {
                 bind: "foo".to_string(),
                 keyfile: "keyfile".to_string(),
+                recaptcha_site: "sitekey".to_string(),
+                recaptcha_secret: "secretkey".to_string(),
             }),
         )
     }
