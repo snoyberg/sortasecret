@@ -6,7 +6,6 @@ use sodiumoxide::crypto::sealedbox::{open, seal};
 use std::path::Path;
 use std::fs::File;
 use std::io::Write;
-use std::io::Read;
 
 #[derive(Debug)]
 pub struct Keypair {
@@ -65,7 +64,9 @@ impl Keypair {
         Ok(())
     }
 
+    #[cfg(test)]
     pub fn decode_file<P: AsRef<Path>>(path: P) -> Result<Keypair, Error> {
+        use std::io::Read;
         let mut file = File::open(path)?;
         let mut contents = vec![];
         file.read_to_end(&mut contents)?;

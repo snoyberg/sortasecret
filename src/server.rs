@@ -20,7 +20,7 @@ struct AppState {
 
 pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
     let script = Arc::new(make_script(&settings));
-    let keypair = Arc::new(Keypair::decode_file(&settings.keyfile)?);
+    let keypair = Arc::new(Keypair::decode(&settings.keypair)?);
     let homepage = Arc::new(make_homepage(&keypair));
     let rs = settings.recaptcha_secret;
 
@@ -219,7 +219,7 @@ function sortasecret() {{
       for (var i = 0; i < nodes.length; ++i) {{
         secrets.push(nodes[i].getAttribute("data-sortasecret"));
       }}
-      fetch("{}/v1/decrypt", {{
+      fetch("/v1/decrypt", {{
         method: "PUT",
         body: JSON.stringify({{token: token, secrets: secrets}}),
         headers: {{"content-type": "application/json"}},
@@ -240,6 +240,5 @@ function sortasecret() {{
 "#,
         settings.recaptcha_site,
         settings.recaptcha_site,
-        settings.approot,
     )
 }

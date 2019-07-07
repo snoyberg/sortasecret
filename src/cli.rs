@@ -12,10 +12,9 @@ pub enum Command {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Server {
     pub bind: String,
-    pub keyfile: String,
+    pub keypair: String,
     pub recaptcha_site: String,
     pub recaptcha_secret: String,
-    pub approot: String,
 }
 
 pub fn parse_command() -> Command {
@@ -48,10 +47,10 @@ where
                          .value_name("bind")
                          .required(true)
                          )
-                    .arg(Arg::with_name("keyfile")
-                         .help("Filename to read key from")
-                         .long("keyfile")
-                         .value_name("keyfile")
+                    .arg(Arg::with_name("keypair")
+                         .help("hex encoded keypair")
+                         .long("keypair")
+                         .value_name("keypair")
                          .required(true)
                          )
                     .arg(Arg::with_name("recaptcha-site")
@@ -66,12 +65,6 @@ where
                          .value_name("recaptcha-secret")
                          .required(true)
                          )
-                    .arg(Arg::with_name("approot")
-                         .help("Root of web application, e.g. http://www.sortasecret.com")
-                         .long("approot")
-                         .value_name("approot")
-                         .required(true)
-                         )
                     )
         .get_matches_from_safe(args)?;
     if let Some(genkey) = matches.subcommand_matches("genkey") {
@@ -79,10 +72,9 @@ where
     } else if let Some(server) = matches.subcommand_matches("server") {
         Ok(Command::Server(Server {
             bind: server.value_of("bind").unwrap().to_string(),
-            keyfile: server.value_of("keyfile").unwrap().to_string(),
+            keypair: server.value_of("keypair").unwrap().to_string(),
             recaptcha_site: server.value_of("recaptcha-site").unwrap().to_string(),
             recaptcha_secret: server.value_of("recaptcha-secret").unwrap().to_string(),
-            approot: server.value_of("approot").unwrap().to_string(),
         }))
     } else {
         panic!("This shouldn't happen {:?}", matches);
@@ -137,21 +129,18 @@ mod test {
                 "server",
                 "--bind",
                 "foo",
-                "--keyfile",
-                "keyfile",
+                "--keypair",
+                "keypair",
                 "--recaptcha-site",
                 "sitekey",
                 "--recaptcha-secret",
                 "secretkey",
-                "--approot",
-                "http://approot.com",
                 ].iter()).unwrap(),
             Command::Server(Server {
                 bind: "foo".to_string(),
-                keyfile: "keyfile".to_string(),
+                keypair: "keypair".to_string(),
                 recaptcha_site: "sitekey".to_string(),
                 recaptcha_secret: "secretkey".to_string(),
-                approot: "http://approot.com".to_string(),
             }),
         )
     }
