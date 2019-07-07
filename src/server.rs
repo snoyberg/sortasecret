@@ -36,6 +36,7 @@ pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
             .route("/v1/encrypt", web::get().to(encrypt))
             .route("/v1/decrypt", web::put().to_async(decrypt))
             .route("/v1/script.js", web::get().to(script_js))
+            .route("/v1/show", web::get().to(show_html))
             .route("/", web::get().to(homepage_html))
     })
         .bind(settings.bind)?
@@ -151,6 +152,38 @@ fn homepage_html(data: web::Data<AppState>) -> impl Responder {
         .body(&*data.homepage)
 }
 
+fn show_html(encreq: web::Query<EncryptRequest>, data: web::Data<AppState>) -> impl Responder {
+    // Check that the secret is actually valid. This also prevents an
+    // XSS attack, since only simple hex values will be allowed
+    // through.
+    match data.keypair.decrypt(&encreq.secret) {
+        Ok(_) => {
+            let html = format!(r#"
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Showing you a secret</title>
+    <script src="/v1/script.js"></script>
+  </head>
+  <body>
+    <h1>Showing you a secret</h1>
+    <button onclick="sortasecret()">Show me the secret</button>
+    <b data-sortasecret="{}">Not showing you the secret yet...</b>
+  </body>
+</html>
+"#,
+                               encreq.secret);
+            HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(&html)
+        }
+        Err(e) => {
+            eprintln!("{:?} {}", e, encreq.secret);
+            HttpResponse::NotFound().body("Invalid secret")
+        }
+    }
+}
+
 fn make_homepage(keypair: &Keypair) -> String {
     format!(
         r#"
@@ -186,7 +219,7 @@ function sortasecret() {{
       for (var i = 0; i < nodes.length; ++i) {{
         secrets.push(nodes[i].getAttribute("data-sortasecret"));
       }}
-      fetch("/v1/decrypt", {{
+      fetch("{}/v1/decrypt", {{
         method: "PUT",
         body: JSON.stringify({{token: token, secrets: secrets}}),
         headers: {{"content-type": "application/json"}},
@@ -207,5 +240,6 @@ function sortasecret() {{
 "#,
         settings.recaptcha_site,
         settings.recaptcha_site,
+        settings.approot,
     )
 }

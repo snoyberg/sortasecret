@@ -15,6 +15,7 @@ pub struct Server {
     pub keyfile: String,
     pub recaptcha_site: String,
     pub recaptcha_secret: String,
+    pub approot: String,
 }
 
 pub fn parse_command() -> Command {
@@ -65,6 +66,12 @@ where
                          .value_name("recaptcha-secret")
                          .required(true)
                          )
+                    .arg(Arg::with_name("approot")
+                         .help("Root of web application, e.g. http://www.sortasecret.com")
+                         .long("approot")
+                         .value_name("approot")
+                         .required(true)
+                         )
                     )
         .get_matches_from_safe(args)?;
     if let Some(genkey) = matches.subcommand_matches("genkey") {
@@ -75,6 +82,7 @@ where
             keyfile: server.value_of("keyfile").unwrap().to_string(),
             recaptcha_site: server.value_of("recaptcha-site").unwrap().to_string(),
             recaptcha_secret: server.value_of("recaptcha-secret").unwrap().to_string(),
+            approot: server.value_of("approot").unwrap().to_string(),
         }))
     } else {
         panic!("This shouldn't happen {:?}", matches);
@@ -135,12 +143,15 @@ mod test {
                 "sitekey",
                 "--recaptcha-secret",
                 "secretkey",
+                "--approot",
+                "http://approot.com",
                 ].iter()).unwrap(),
             Command::Server(Server {
                 bind: "foo".to_string(),
                 keyfile: "keyfile".to_string(),
                 recaptcha_site: "sitekey".to_string(),
                 recaptcha_secret: "secretkey".to_string(),
+                approot: "http://approot.com".to_string(),
             }),
         )
     }
