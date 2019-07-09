@@ -11,33 +11,28 @@ use awc::error::JsonPayloadError;
 use futures::future::Future;
 use std::collections::HashMap;
 
-struct AppState {
-    keypair: Arc<Keypair>,
-    script: Arc<String>,
-    homepage: Arc<String>,
-    recaptcha_secret: String,
-}
-
 pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
-    let script = Arc::new(make_script(&settings));
+    let script: Arc<String> = Arc::new(make_script(&settings));
     let keypair = Arc::new(Keypair::decode(&settings.keypair)?);
     let homepage = Arc::new(make_homepage(&keypair));
-    let rs = settings.recaptcha_secret;
+    let rs = Arc::new(settings.recaptcha_secret);
 
     HttpServer::new(move || {
+        let keypair_pubkey = keypair.clone();
+        let keypair_encrypt = keypair.clone();
+        let keypair_decrypt = keypair.clone();
+        let keypair_show = keypair.clone();
+        let script = script.clone();
+        let homepage = homepage.clone();
+        let rs = rs.clone();
+
         App::new()
-            .data(AppState {
-                keypair: keypair.clone(),
-                script: script.clone(),
-                homepage: homepage.clone(),
-                recaptcha_secret: rs.clone(),
-            })
-            .route("/v1/pubkey", web::get().to(pubkey))
-            .route("/v1/encrypt", web::get().to(encrypt))
-            .route("/v1/decrypt", web::put().to_async(decrypt))
-            .route("/v1/script.js", web::get().to(script_js))
-            .route("/v1/show", web::get().to(show_html))
-            .route("/", web::get().to(homepage_html))
+            .route("/v1/pubkey", web::get().to(move || pubkey(keypair_pubkey.clone())))
+            .route("/v1/encrypt", web::get().to(move |encreq| encrypt(encreq, keypair_encrypt.clone())))
+            .route("/v1/decrypt", web::put().to_async(move |decreq| decrypt(decreq, keypair_decrypt.clone(), rs.clone())))
+            .route("/v1/script.js", web::get().to(move || script_js(script.clone())))
+            .route("/v1/show", web::get().to(move |encreq| show_html(encreq, keypair_show.clone())))
+            .route("/", web::get().to(move || homepage_html(homepage.clone())))
     })
         .bind(settings.bind)?
         .run()?;
@@ -45,8 +40,8 @@ pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
     Ok(())
 }
 
-fn pubkey(data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().body(&data.keypair.public_hex)
+fn pubkey(keypair: Arc<Keypair>) -> impl Responder {
+    HttpResponse::Ok().body(&keypair.public_hex)
 }
 
 #[derive(Deserialize, Debug)]
@@ -94,18 +89,17 @@ struct DecryptResponse {
     decrypted: HashMap<String, String>,
 }
 
-fn encrypt(encreq: web::Query<EncryptRequest>, data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().body(data.keypair.encrypt(&encreq.secret))
+fn encrypt(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Responder {
+    HttpResponse::Ok().body(keypair.encrypt(&encreq.secret))
 }
 
-fn decrypt(decreq: web::Json<DecryptRequest>, data: web::Data<AppState>) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
+fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: Arc<String>) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
     let decreq = decreq.into_inner();
     let req = VerifyRequest {
         // FIXME simplify the Arc and remove clone usages
-        secret: data.recaptcha_secret.clone(),
+        secret: recaptcha_secret.as_ref().clone(),
         response: decreq.token,
     };
-    let keypair = data.keypair.clone();
     let secrets = decreq.secrets;
 
     Client::default()
@@ -141,23 +135,23 @@ fn decrypt(decreq: web::Json<DecryptRequest>, data: web::Data<AppState>) -> impl
         })
 }
 
-fn script_js(data: web::Data<AppState>) -> impl Responder {
+fn script_js(body: Arc<String>) -> impl Responder {
     HttpResponse::Ok()
         .content_type("text/javascript; charset=utf-8")
-        .body(&*data.script)
+        .body(&*body)
 }
 
-fn homepage_html(data: web::Data<AppState>) -> impl Responder {
+fn homepage_html(body: Arc<String>) -> impl Responder {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(&*data.homepage)
+        .body(&*body)
 }
 
-fn show_html(encreq: web::Query<EncryptRequest>, data: web::Data<AppState>) -> impl Responder {
+fn show_html(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Responder {
     // Check that the secret is actually valid. This also prevents an
     // XSS attack, since only simple hex values will be allowed
     // through.
-    match data.keypair.decrypt(&encreq.secret) {
+    match keypair.decrypt(&encreq.secret) {
         Ok(_) => {
             let html = format!(r#"
 <!DOCTYPE html>
