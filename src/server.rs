@@ -29,7 +29,7 @@ pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
         App::new()
             .route("/v1/pubkey", web::get().to(move || pubkey(keypair_pubkey.clone())))
             .route("/v1/encrypt", web::get().to(move |encreq| encrypt(encreq, keypair_encrypt.clone())))
-            .route("/v1/decrypt", web::put().to_async(move |decreq| decrypt(decreq, keypair_decrypt.clone(), rs.clone())))
+            .route("/v1/decrypt", web::put().to_async(move |decreq| decrypt(decreq, keypair_decrypt.clone(), rs.as_ref().clone())))
             .route("/v1/script.js", web::get().to(move || script_js(script.clone())))
             .route("/v1/show", web::get().to(move |encreq| show_html(encreq, keypair_show.clone())))
             .route("/", web::get().to(move || homepage_html(homepage.clone())))
@@ -93,11 +93,11 @@ fn encrypt(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Re
     HttpResponse::Ok().body(keypair.encrypt(&encreq.secret))
 }
 
-fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: Arc<String>) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
+fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: String) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
     let decreq = decreq.into_inner();
     let req = VerifyRequest {
         // Looks like a copy of this data is necessary, see https://serde.rs/feature-flags.html#-features-rc
-        secret: recaptcha_secret.as_ref().clone(),
+        secret: recaptcha_secret,
         response: decreq.token,
     };
     let secrets = decreq.secrets;
