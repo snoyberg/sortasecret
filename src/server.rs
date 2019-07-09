@@ -96,7 +96,7 @@ fn encrypt(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Re
 fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: Arc<String>) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
     let decreq = decreq.into_inner();
     let req = VerifyRequest {
-        // FIXME simplify the Arc and remove clone usages
+        // Looks like a copy of this data is necessary, see https://serde.rs/feature-flags.html#-features-rc
         secret: recaptcha_secret.as_ref().clone(),
         response: decreq.token,
     };
