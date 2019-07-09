@@ -99,13 +99,14 @@ fn encrypt(encreq: web::Query<EncryptRequest>, data: web::Data<AppState>) -> imp
 }
 
 fn decrypt(decreq: web::Json<DecryptRequest>, data: web::Data<AppState>) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
+    let decreq = decreq.into_inner();
     let req = VerifyRequest {
         // FIXME simplify the Arc and remove clone usages
         secret: data.recaptcha_secret.clone(),
-        response: decreq.token.clone(),
+        response: decreq.token,
     };
     let keypair = data.keypair.clone();
-    let secrets = decreq.secrets.clone();
+    let secrets = decreq.secrets;
 
     Client::default()
         .post("https://www.google.com/recaptcha/api/siteverify")
