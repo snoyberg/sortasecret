@@ -56,9 +56,9 @@ struct DecryptRequest {
 }
 
 #[derive(Serialize, Debug)]
-struct VerifyRequest {
-    secret: String,
-    response: String,
+struct VerifyRequest<Str1, Str2> {
+    secret: Str1,
+    response: Str2,
 }
 
 #[derive(Debug)]
@@ -97,7 +97,7 @@ fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_s
     let decreq = decreq.into_inner();
     let req = VerifyRequest {
         // Looks like a copy of this data is necessary, see https://serde.rs/feature-flags.html#-features-rc
-        secret: recaptcha_secret,
+        secret: &recaptcha_secret,
         response: decreq.token,
     };
     let secrets = decreq.secrets;
