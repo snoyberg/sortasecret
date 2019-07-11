@@ -11,6 +11,7 @@ base16 = "0.1"
 actix-web = { version="1.0", features=["ssl", "rust-tls"] }
 serde = "1.0.94"
 serde_derive = "1.0.94"
+serde_urlencoded = ""
 futures = "0.1.28"
 awc = "0.2"
 
