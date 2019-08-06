@@ -1,0 +1,12 @@
+nameOverride: staging
+ingress:
+  # Used to create an Ingress record.
+  hosts:
+    - staging.sortasecret.com
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: "staging.sortasecret.com"
+  tls:
+    # This secret is automatically created by 'kube-lego'
+    - secretName: sortasecret-staging-tls
+      hosts:
+        - staging.sortasecret.com
