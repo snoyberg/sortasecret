@@ -10,3 +10,10 @@ ingress:
     - secretName: sortasecret-prod-tls
       hosts:
         - www.sortasecret.com
+resources:
+  limits:
+   cpu: 100m
+   memory: 128Mi
+  requests:
+   cpu: 100m
+   memory: 128Mi

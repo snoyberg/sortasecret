@@ -10,3 +10,10 @@ ingress:
     - secretName: sortasecret-staging-tls
       hosts:
         - staging.sortasecret.com
+resources:
+  limits:
+   cpu: 100m
+   memory: 128Mi
+  requests:
+   cpu: 100m
+   memory: 128Mi
