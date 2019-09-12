@@ -3,8 +3,9 @@ ingress:
   # Used to create an Ingress record.
   hosts:
     - www.sortasecret.com
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: "www.sortasecret.com"
+  # DNS is not in Route53, so this entry is disabled
+  #annotations:
+  #  external-dns.alpha.kubernetes.io/hostname: "www.sortasecret.com"
   tls:
     # This secret is automatically created by 'kube-lego'
     - secretName: sortasecret-prod-tls
