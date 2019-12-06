@@ -1,15 +1,12 @@
 extern crate actix_web;
 extern crate futures;
-extern crate awc;
 extern crate serde_urlencoded;
 
 use super::cli::Server;
 use super::keypair::Keypair;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use std::sync::Arc;
-use actix_web::client::{Client, SendRequestError};
-use awc::error::JsonPayloadError;
-use futures::future::{Future, FutureResult};
+use futures::future::Future;
 use std::collections::HashMap;
 
 pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
@@ -64,19 +61,20 @@ struct VerifyRequest<'a> {
 
 #[derive(Debug)]
 enum VerifyError {
-    InvalidJson(JsonPayloadError),
-    SendRequest(SendRequestError),
+    IO(std::io::Error),
+    SerdeUrl(serde_urlencoded::ser::Error),
+    Surf(surf::Exception),
 }
 
-impl From<JsonPayloadError> for VerifyError {
-    fn from(e: JsonPayloadError) -> VerifyError {
-        VerifyError::InvalidJson(e)
+impl From<std::io::Error> for VerifyError {
+    fn from(e: std::io::Error) -> Self {
+        VerifyError::IO(e)
     }
 }
 
-impl From<SendRequestError> for VerifyError {
-    fn from(e: SendRequestError) -> VerifyError {
-        VerifyError::SendRequest(e)
+impl From<serde_urlencoded::ser::Error> for VerifyError {
+    fn from(e: serde_urlencoded::ser::Error) -> Self {
+        VerifyError::SerdeUrl(e)
     }
 }
 
@@ -94,6 +92,15 @@ fn encrypt(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Re
     HttpResponse::Ok().body(keypair.encrypt(&encreq.secret))
 }
 
+async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, VerifyError> {
+    Ok(surf::post("https://www.google.com/recaptcha/api/siteverify")
+        .set_header("User-Agent", "surf")
+        .body_form(body)?
+        .await
+        .map_err(|e| VerifyError::Surf(e))?
+        .body_json().await?)
+}
+
 fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: &str) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
     let decreq = decreq.into_inner();
     let req = VerifyRequest {
@@ -103,44 +110,36 @@ fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_s
     };
     let secrets = decreq.secrets;
 
-    // Workaround impl Trait lifetime issues, see https://stackoverflow.com/q/56973146/369198
-    let urlencoded: FutureResult<_, _> = serde_urlencoded::to_string(&req).into();
-    urlencoded
-        .from_err()
-        .and_then(|body| {
-            Client::default()
-                .post("https://www.google.com/recaptcha/api/siteverify")
-                .header("User-Agent", "Actix-web")
-                .set_header_if_none("Content-Type", "application/x-www-form-urlencoded")
-                .send_body(body)
-                .from_err()
-                .and_then(|mut res| res.json().from_err())
-                .map(move |res: VerifyResponse| {
-                    if res.success {
-                        let decrypted = secrets
-                            .into_iter()
-                            .map(|secret| {
-                                let cleartext = match keypair.decrypt(&secret) {
-                                    Err(e) => format!("Could not decrypt secret: {:?}", e),
-                                    Ok(vec) => match String::from_utf8(vec) {
-                                        Ok(s) => s,
-                                        Err(e) => format!("Invalid UTF-8 value: {:?}", e),
-                                    }
-                                };
-                                (secret, cleartext)
-                            })
-                            .collect();
-                        HttpResponse::Ok().json(DecryptResponse {decrypted})
-                    } else {
-                        HttpResponse::BadRequest().body("Recaptcha fail")
-                    }
-                })
-            // FIXME log the actual error with a UUID for discovery
-                .or_else(|err: VerifyError| {
-                    eprintln!("Error: {:?}", err);
-                    Ok(HttpResponse::InternalServerError().body("An internal error occurred"))
-                })
-        })
+    // FIXME Temporary hack: block in here
+    let verres = async_std::task::block_on(site_verify(&req));
+
+    let res: HttpResponse = match verres {
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+            HttpResponse::InternalServerError().body("An internal error occurred")
+        }
+        Ok(res) => {
+            if res.success {
+                let decrypted = secrets
+                    .into_iter()
+                    .map(|secret| {
+                        let cleartext = match keypair.decrypt(&secret) {
+                            Err(e) => format!("Could not decrypt secret: {:?}", e),
+                            Ok(vec) => match String::from_utf8(vec) {
+                                Ok(s) => s,
+                                Err(e) => format!("Invalid UTF-8 value: {:?}", e),
+                            }
+                        };
+                        (secret, cleartext)
+                    })
+                .collect();
+                HttpResponse::Ok().json(DecryptResponse {decrypted})
+            } else {
+                HttpResponse::BadRequest().body("Recaptcha fail")
+            }
+        }
+    };
+    futures::future::ok(res)
 }
 
 fn script_js(body: Arc<String>) -> impl Responder {

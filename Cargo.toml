@@ -13,7 +13,10 @@ serde = "1.0.94"
 serde_derive = "1.0.94"
 serde_urlencoded = ""
 futures = "0.1.28"
-awc = "0.2"
+surf = "1.0.3"
+
+# FIXME temporary
+async-std = ""
 
 [dev-dependencies]
 quickcheck = "0.8"
