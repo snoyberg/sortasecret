@@ -1,4 +1,4 @@
-FROM rust:1.35.0 AS build
+FROM rust:1.39.0 AS build
 
 COPY ./ ./
 RUN mkdir -p /artifacts/
