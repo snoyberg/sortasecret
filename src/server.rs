@@ -4,9 +4,8 @@ extern crate serde_urlencoded;
 
 use super::cli::Server;
 use super::keypair::Keypair;
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpResponse, HttpServer, HttpRequest};
 use std::sync::Arc;
-use futures::future::Future;
 use std::collections::HashMap;
 
 pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
@@ -27,10 +26,10 @@ pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
         App::new()
             .route("/v1/pubkey", web::get().to(move || pubkey(keypair_pubkey.clone())))
             .route("/v1/encrypt", web::get().to(move |encreq| encrypt(encreq, keypair_encrypt.clone())))
-            .route("/v1/decrypt", web::put().to_async(move |decreq| decrypt(decreq, keypair_decrypt.clone(), &rs)))
+            .route("/v1/decrypt", web::put().to(move |decreq| decrypt(decreq, keypair_decrypt.clone(), &rs)))
             .route("/v1/script.js", web::get().to(move || script_js(script.clone())))
             .route("/v1/show", web::get().to(move |encreq| show_html(encreq, keypair_show.clone())))
-            .route("/", web::get().to(move || homepage_html(homepage.clone())))
+            .route("/", web::get().to(move |_: HttpRequest| homepage_html(homepage.clone())))
     })
         .bind(settings.bind)?
         .run()?;
@@ -38,7 +37,7 @@ pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
     Ok(())
 }
 
-fn pubkey(keypair: Arc<Keypair>) -> impl Responder {
+fn pubkey(keypair: Arc<Keypair>) -> HttpResponse {
     HttpResponse::Ok().body(&keypair.public_hex)
 }
 
@@ -88,7 +87,7 @@ struct DecryptResponse {
     decrypted: HashMap<String, String>,
 }
 
-fn encrypt(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Responder {
+fn encrypt(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> HttpResponse {
     HttpResponse::Ok().body(keypair.encrypt(&encreq.secret))
 }
 
@@ -101,7 +100,12 @@ async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, Ver
         .body_json().await?)
 }
 
-fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: &str) -> impl Future<Item=impl Responder, Error=actix_web::Error> {
+fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: &str) -> HttpResponse {
+    // FIXME evil blocking
+    async_std::task::block_on(decrypt_async(decreq, keypair, recaptcha_secret))
+}
+
+async fn decrypt_async(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_secret: &str) -> HttpResponse {
     let decreq = decreq.into_inner();
     let req = VerifyRequest {
         // Looks like a copy of this data is necessary, see https://serde.rs/feature-flags.html#-features-rc
@@ -111,9 +115,9 @@ fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_s
     let secrets = decreq.secrets;
 
     // FIXME Temporary hack: block in here
-    let verres = async_std::task::block_on(site_verify(&req));
+    let verres = site_verify(&req).await;
 
-    let res: HttpResponse = match verres {
+    match verres {
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().body("An internal error occurred")
@@ -138,23 +142,22 @@ fn decrypt(decreq: web::Json<DecryptRequest>, keypair: Arc<Keypair>, recaptcha_s
                 HttpResponse::BadRequest().body("Recaptcha fail")
             }
         }
-    };
-    futures::future::ok(res)
+    }
 }
 
-fn script_js(body: Arc<String>) -> impl Responder {
+fn script_js(body: Arc<String>) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("text/javascript; charset=utf-8")
         .body(&*body)
 }
 
-fn homepage_html(body: Arc<String>) -> impl Responder {
+fn homepage_html(body: Arc<String>) -> HttpResponse {
     HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(&*body)
 }
 
-fn show_html(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> impl Responder {
+fn show_html(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> HttpResponse {
     // Check that the secret is actually valid. This also prevents an
     // XSS attack, since only simple hex values will be allowed
     // through.
