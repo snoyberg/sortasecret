@@ -1,0 +1,17 @@
+image: messense/rust-musl-cross:x86_64-musl
+
+stages:
+  - build
+
+build:
+  stage: build
+  script:
+    - rustup toolchain install $(cat rust-toolchain) --target x86_64-unknown-linux-musl
+    - cargo build --release --target x86_64-unknown-linux-musl
+    - mkdir -p binary/linux-musl
+    - cp target/x86_64-unknown-linux-musl/release/sortasecret binary/linux-musl
+    - strip binary/linux-musl/sortasecret
+
+  artifacts:
+    paths:
+    - binary/
