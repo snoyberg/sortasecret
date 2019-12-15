@@ -7,6 +7,7 @@ use super::keypair::Keypair;
 use actix_web::{web, App, HttpResponse, HttpServer, HttpRequest};
 use std::sync::Arc;
 use std::collections::HashMap;
+use askama::Template;
 
 pub fn run(settings: Server) -> Result<(), super::keypair::Error> {
     let script: Arc<String> = Arc::new(make_script(&settings));
@@ -157,27 +158,21 @@ fn homepage_html(body: Arc<String>) -> HttpResponse {
         .body(&*body)
 }
 
+#[derive(Template)]
+#[template(path = "show-html.html")]
+struct ShowHtml<'a> {
+    secret: &'a str,
+}
+
 fn show_html(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> HttpResponse {
     // Check that the secret is actually valid. This also prevents an
     // XSS attack, since only simple hex values will be allowed
     // through.
     match keypair.decrypt(&encreq.secret) {
         Ok(_) => {
-            let html = format!(r#"
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Showing you a secret</title>
-    <script src="/v1/script.js"></script>
-  </head>
-  <body>
-    <h1>Showing you a secret</h1>
-    <button onclick="sortasecret()">Show me the secret</button>
-    <b data-sortasecret="{}">Not showing you the secret yet...</b>
-  </body>
-</html>
-"#,
-                               encreq.secret);
+            let html = ShowHtml {
+                secret: &encreq.secret,
+            }.render().unwrap();
             HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .body(&html)
@@ -189,24 +184,16 @@ fn show_html(encreq: web::Query<EncryptRequest>, keypair: Arc<Keypair>) -> HttpR
     }
 }
 
+#[derive(Template)]
+#[template(path = "homepage.html")]
+struct Homepage {
+    secret: String,
+}
+
 fn make_homepage(keypair: &Keypair) -> String {
-    format!(
-        r#"
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Sorta Secret</title>
-  </head>
-  <body>
-    <script src="/v1/script.js"></script>
-    <h1>Sorta Secret</h1>
-    <p><a href="javascript:sortasecret()">Decrypt the secrets below!</a></p>
-    <p data-sortasecret="{}"><i>This is a secret</i></p>
-  </body>
-</html>
-"#,
-        keypair.encrypt("The secret message has now been decrypted, congratulations!"),
-    )
+    Homepage {
+        secret: keypair.encrypt("The secret message has now been decrypted, congratulations!"),
+    }.render().unwrap()
 }
 
 fn make_script(settings: &Server) -> String {
