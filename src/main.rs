@@ -11,10 +11,15 @@ mod genkey;
 mod keypair;
 mod server;
 
-fn main() -> Result<(), keypair::Error> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     use cli::Command::*;
     match cli::parse_command() {
-        GenKey(file) => genkey::run(file),
-        Server(server) => server::run(server),
+        GenKey(file) => genkey::run(file)?,
+        Server(server) => {
+            let mut rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(server::run(server))?
+        },
     }
+
+    Ok(())
 }

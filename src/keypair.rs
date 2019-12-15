@@ -23,6 +23,16 @@ pub enum Error {
     IO(std::io::Error),
 }
 
+impl std::error::Error for Error {
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+        // FIXME do better
+        write!(fmt, "{:?}", self)
+    }
+}
+
 impl From<base16::DecodeError> for Error {
     fn from(e: base16::DecodeError) -> Error {
         Error::InvalidHex(e)

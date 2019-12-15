@@ -8,15 +8,15 @@ edition = "2018"
 clap = "~2.33"
 sodiumoxide = "0.2.2"
 base16 = "0.1"
-actix-web = "2.0.0-alpha.2"
 serde = "1.0.94"
 serde_derive = "1.0.94"
 serde_urlencoded = ""
-futures = "0.3"
+serde_json = ""
 surf = "1.0.3"
 askama = "0.8.0"
-
-async-std = "" # FIXME don't want this
+hyper = "0.13"
+tokio = "0.2"
+futures-util = ""
 
 [dev-dependencies]
 quickcheck = "0.8"
