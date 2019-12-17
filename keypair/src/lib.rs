@@ -50,7 +50,9 @@ impl From<std::io::Error> for Error {
 
 impl Keypair {
     pub fn generate() -> Keypair {
-        Keypair { key: rand::random() }
+        let mut key = [0; 16];
+        getrandom::getrandom(&mut key).unwrap();
+        Keypair { key }
     }
 
     pub fn encode(&self) -> String {
@@ -87,7 +89,8 @@ impl Keypair {
 
     pub fn encrypt<T: AsRef<[u8]>>(&self, msg: T) -> String {
         let msg: &[u8] = msg.as_ref();
-        let nonce: [u8; 8] = rand::random();
+        let mut nonce: [u8; 8] = [0; 8];
+        getrandom::getrandom(&mut nonce).unwrap();
         let mut key = ChaCha20Poly1305::new(&self.key, &nonce, &[]);
         let mut tag = [0; 16];
         let mut output: Vec<u8> = Vec::new();

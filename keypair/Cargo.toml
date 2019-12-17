@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 cryptoxide = "0.1.2"
 base16 = "0.1"
-rand = "0.7"
+getrandom = "0.1.13"
 
 [dev-dependencies]
 quickcheck = "0.8"
