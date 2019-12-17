@@ -28,7 +28,7 @@ pub(crate) fn show_html(url: &url::Url) -> Result<(u16, String), Box<dyn std::er
                 }.render()?;
                 Ok((200, html))
             }
-            Err(e) => Ok((400, "Invalid secret".into())),
+            Err(_e) => Ok((400, "Invalid secret".into())),
         }
         None => Ok((400, "Invalid parameters".into())),
     }
