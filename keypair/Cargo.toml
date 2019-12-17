@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 cryptoxide = "0.1.2"
 base16 = "0.1"
-getrandom = "0.1.13"
+getrandom = { version = "0.1.13", features = ["wasm-bindgen"] } # FIXME make this conditional
 
 [dev-dependencies]
 quickcheck = "0.8"

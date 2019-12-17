@@ -24,6 +24,7 @@ pub enum Error {
     InvalidKeyLength(usize),
     InvalidMessage,
     IO(std::io::Error),
+    Getrandom(getrandom::Error),
 }
 
 impl std::error::Error for Error {
@@ -48,11 +49,17 @@ impl From<std::io::Error> for Error {
     }
 }
 
+impl From<getrandom::Error> for Error {
+    fn from(e: getrandom::Error) -> Error {
+        Error::Getrandom(e)
+    }
+}
+
 impl Keypair {
-    pub fn generate() -> Keypair {
+    pub fn generate() -> Result<Keypair, Error> {
         let mut key = [0; 16];
-        getrandom::getrandom(&mut key).unwrap();
-        Keypair { key }
+        getrandom::getrandom(&mut key)?;
+        Ok(Keypair { key })
     }
 
     pub fn encode(&self) -> String {
@@ -87,21 +94,21 @@ impl Keypair {
         Keypair::decode(&contents)
     }
 
-    pub fn encrypt<T: AsRef<[u8]>>(&self, msg: T) -> String {
+    pub fn encrypt<T: AsRef<[u8]>>(&self, msg: T) -> Result<String, Error> {
         let msg: &[u8] = msg.as_ref();
         let mut nonce: [u8; 8] = [0; 8];
-        getrandom::getrandom(&mut nonce).unwrap();
+        getrandom::getrandom(&mut nonce)?;
         let mut key = ChaCha20Poly1305::new(&self.key, &nonce, &[]);
         let mut tag = [0; 16];
         let mut output: Vec<u8> = Vec::new();
         output.resize(msg.len(), 0);
         key.encrypt(msg, &mut output, &mut tag);
-        format!(
+        Ok(format!(
             "{}{}{}",
             base16::encode_lower(&nonce),
             base16::encode_lower(&tag),
             base16::encode_lower(&output),
-            )
+            ))
     }
 
     pub fn decrypt<T: AsRef<[u8]>>(&self, hex: T) -> Result<Vec<u8>, Error> {
@@ -129,13 +136,13 @@ mod test {
 
     #[test]
     fn test_encode_decode_memory() {
-        let keypair = Keypair::generate();
+        let keypair = Keypair::generate().unwrap();
         assert_eq!(keypair, Keypair::decode(&keypair.encode()).unwrap());
     }
 
     #[test]
     fn test_encode_decode_files() {
-        let keypair = Keypair::generate();
+        let keypair = Keypair::generate().unwrap();
         let dir = tempdir().unwrap();
         let file = dir.path().join("keypair");
         keypair.encode_file(&file).unwrap();
@@ -161,7 +168,7 @@ mod test {
 
     #[quickcheck]
     fn prop_encrypt_decrypt(secret: String) {
-        let keypair = Keypair::generate();
-        assert_eq!(secret.as_bytes()[..], keypair.decrypt(keypair.encrypt(&secret)).unwrap()[..])
+        let keypair = Keypair::generate().unwrap();
+        assert_eq!(secret.as_bytes()[..], keypair.decrypt(keypair.encrypt(&secret).unwrap()).unwrap()[..])
     }
 }

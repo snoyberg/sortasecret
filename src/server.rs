@@ -238,10 +238,10 @@ struct Homepage {
     secret: String,
 }
 
-fn make_homepage(keypair: &Keypair) -> Result<String, askama::Error> {
-    Homepage {
-        secret: keypair.encrypt("The secret message has now been decrypted, congratulations!"),
-    }.render()
+fn make_homepage(keypair: &Keypair) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(Homepage {
+        secret: keypair.encrypt("The secret message has now been decrypted, congratulations!")?,
+    }.render()?)
 }
 
 #[derive(Template)]
