@@ -1,13 +1,7 @@
 extern crate clap;
 
-use clap::{App, AppSettings, SubCommand, Arg};
+use clap::{App, Arg};
 use std::ffi::OsString;
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Command {
-    GenKey(Option<String>),
-    Server(Server),
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Server {
@@ -17,11 +11,11 @@ pub struct Server {
     pub recaptcha_secret: String,
 }
 
-pub fn parse_command() -> Command {
+pub fn parse_command() -> Server {
     parse_command_from(&mut std::env::args_os()).unwrap_or_else(|e| e.exit())
 }
 
-fn parse_command_from<I, T>(args: I) -> Result<Command, clap::Error>
+fn parse_command_from<I, T>(args: I) -> Result<Server, clap::Error>
 where
     I: Iterator<Item = T>,
     T: Into<OsString> + Clone,
@@ -30,55 +24,37 @@ where
         .version("0.1")
         .author("Michael Snoyman <michael@snoyman.com>")
         .about("Hides sorta-secret information on webpages behind a Captcha")
-        .setting(AppSettings::SubcommandRequired)
-        .subcommand(SubCommand::with_name("genkey")
-                    .about("Generate a new private key")
-                    .arg(Arg::with_name("file")
-                         .help("Filename to write key to, if omitted writes to stdout")
-                         .long("file")
-                         .value_name("file")
-                         )
-        )
-        .subcommand(SubCommand::with_name("server")
-                    .about("Launch the web server")
-                    .arg(Arg::with_name("bind")
-                         .help("Host/port to bind to, e.g. 127.0.0.1:8080")
-                         .long("bind")
-                         .value_name("bind")
-                         .required(true)
-                         )
-                    .arg(Arg::with_name("keypair")
-                         .help("hex encoded keypair")
-                         .long("keypair")
-                         .value_name("keypair")
-                         .required(true)
-                         )
-                    .arg(Arg::with_name("recaptcha-site")
-                         .help("Recaptcha site key")
-                         .long("recaptcha-site")
-                         .value_name("recaptcha-site")
-                         .required(true)
-                         )
-                    .arg(Arg::with_name("recaptcha-secret")
-                         .help("Recaptcha secret key")
-                         .long("recaptcha-secret")
-                         .value_name("recaptcha-secret")
-                         .required(true)
-                         )
-                    )
+        .arg(Arg::with_name("bind")
+             .help("Host/port to bind to, e.g. 127.0.0.1:8080")
+             .long("bind")
+             .value_name("bind")
+             .required(true)
+            )
+        .arg(Arg::with_name("keypair")
+             .help("hex encoded keypair")
+             .long("keypair")
+             .value_name("keypair")
+             .required(true)
+            )
+        .arg(Arg::with_name("recaptcha-site")
+             .help("Recaptcha site key")
+             .long("recaptcha-site")
+             .value_name("recaptcha-site")
+             .required(true)
+            )
+        .arg(Arg::with_name("recaptcha-secret")
+             .help("Recaptcha secret key")
+             .long("recaptcha-secret")
+             .value_name("recaptcha-secret")
+             .required(true)
+            )
         .get_matches_from_safe(args)?;
-    if let Some(genkey) = matches.subcommand_matches("genkey") {
-        Ok(Command::GenKey(genkey.value_of("file").map(|s| s.to_string())))
-    } else if let Some(server) = matches.subcommand_matches("server") {
-        Ok(Command::Server(Server {
-            bind: server.value_of("bind").unwrap().to_string(),
-            keypair: server.value_of("keypair").unwrap().to_string(),
-            recaptcha_site: server.value_of("recaptcha-site").unwrap().to_string(),
-            recaptcha_secret: server.value_of("recaptcha-secret").unwrap().to_string(),
-        }))
-    } else {
-        panic!("This shouldn't happen {:?}", matches);
-    }
+    Ok(Server {
+        bind: matches.value_of("bind").unwrap().to_string(),
+        keypair: matches.value_of("keypair").unwrap().to_string(),
+        recaptcha_site: matches.value_of("recaptcha-site").unwrap().to_string(),
+        recaptcha_secret: matches.value_of("recaptcha-secret").unwrap().to_string(),
+    })
 }
 
 #[cfg(test)]
@@ -87,18 +63,12 @@ mod test {
 
     #[test]
     fn test_genkey() {
-        assert_eq!(
-            parse_command_from(["exename", "genkey"].iter()).unwrap(),
-            Command::GenKey(None)
-        );
+        parse_command_from(["exename", "genkey"].iter()).unwrap_err();
     }
 
     #[test]
     fn test_genkey_file() {
-        assert_eq!(
-            parse_command_from(["exename", "genkey", "--file", "foo"].iter()).unwrap(),
-            Command::GenKey(Some("foo".to_string()))
-        );
+        parse_command_from(["exename", "genkey", "--file", "foo"].iter()).unwrap_err();
     }
 
     #[test]
@@ -126,7 +96,6 @@ mod test {
         assert_eq!(
             parse_command_from([
                 "exename",
-                "server",
                 "--bind",
                 "foo",
                 "--keypair",
@@ -136,12 +105,12 @@ mod test {
                 "--recaptcha-secret",
                 "secretkey",
                 ].iter()).unwrap(),
-            Command::Server(Server {
+            Server {
                 bind: "foo".to_string(),
                 keypair: "keypair".to_string(),
                 recaptcha_site: "sitekey".to_string(),
                 recaptcha_secret: "secretkey".to_string(),
-            }),
+            },
         )
     }
 

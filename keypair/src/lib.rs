@@ -1,6 +1,12 @@
 extern crate base16;
 extern crate sodiumoxide;
 
+#[cfg(test)]
+extern crate quickcheck;
+#[cfg(test)]
+#[macro_use(quickcheck)]
+extern crate quickcheck_macros;
+
 use sodiumoxide::crypto::box_::{PublicKey, SecretKey, gen_keypair};
 use sodiumoxide::crypto::sealedbox::{open, seal};
 use std::path::Path;

@@ -1,5 +1,5 @@
 use super::cli::Server;
-use super::keypair::Keypair;
+use keypair::Keypair;
 use std::sync::Arc;
 use std::collections::HashMap;
 use askama::Template;

@@ -7,19 +7,12 @@ extern crate quickcheck;
 extern crate quickcheck_macros;
 
 mod cli;
-mod genkey;
-mod keypair;
 mod server;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use cli::Command::*;
-    match cli::parse_command() {
-        GenKey(file) => genkey::run(file)?,
-        Server(server) => {
-            let mut rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(server::run(server))?
-        },
-    }
+    let server = cli::parse_command();
+    let mut rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(server::run(server))?;
 
     Ok(())
 }
