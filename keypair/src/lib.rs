@@ -1,5 +1,4 @@
 extern crate base16;
-extern crate sodiumoxide;
 
 #[cfg(test)]
 extern crate quickcheck;
@@ -7,24 +6,22 @@ extern crate quickcheck;
 #[macro_use(quickcheck)]
 extern crate quickcheck_macros;
 
-use sodiumoxide::crypto::box_::{PublicKey, SecretKey, gen_keypair};
-use sodiumoxide::crypto::sealedbox::{open, seal};
 use std::path::Path;
 use std::fs::File;
 use std::io::Write;
 
-#[derive(Debug)]
+use cryptoxide::chacha20poly1305::ChaCha20Poly1305;
+
+// FIXME no longer a keypair...
+#[derive(Debug, PartialEq)]
 pub struct Keypair {
-    /// base16 encoded public key
-    pub public_hex: String,
-    public: PublicKey,
-    secret: SecretKey,
+    key: [u8; 16],
 }
 
 #[derive(Debug)]
 pub enum Error {
     InvalidHex(base16::DecodeError),
-    InvalidKey,
+    InvalidKeyLength(usize),
     InvalidMessage,
     IO(std::io::Error),
 }
@@ -53,24 +50,23 @@ impl From<std::io::Error> for Error {
 
 impl Keypair {
     pub fn generate() -> Keypair {
-        let (public, secret) = gen_keypair();
-        let public_hex = base16::encode_lower(&public);
-        Keypair { secret, public, public_hex }
+        Keypair { key: rand::random() }
     }
 
     pub fn encode(&self) -> String {
-        base16::encode_lower(&self.secret)
+        base16::encode_lower(&self.key)
     }
 
     pub fn decode<T: AsRef<[u8]>>(hex: T) -> Result<Keypair, Error> {
         let bytes = base16::decode(&hex)?;
-        match SecretKey::from_slice(&bytes) {
-            None => Err(Error::InvalidKey),
-            Some(secret) => {
-                let public = secret.public_key();
-                let public_hex = base16::encode_lower(&public);
-                Ok(Keypair { secret, public, public_hex })
+        let mut key: [u8; 16] = [0; 16];
+        if bytes.len() == 16 {
+            for i in 0..16 {
+                key[i] = bytes[i];
             }
+            Ok(Keypair { key })
+        } else {
+            Err(Error::InvalidKeyLength(bytes.len()))
         }
     }
 
@@ -90,20 +86,34 @@ impl Keypair {
     }
 
     pub fn encrypt<T: AsRef<[u8]>>(&self, msg: T) -> String {
-        let vec = seal(msg.as_ref(), &self.public);
-        base16::encode_lower(&vec)
+        let msg: &[u8] = msg.as_ref();
+        let nonce: [u8; 8] = rand::random();
+        let mut key = ChaCha20Poly1305::new(&self.key, &nonce, &[]);
+        let mut tag = [0; 16];
+        let mut output: Vec<u8> = Vec::new();
+        output.resize(msg.len(), 0);
+        key.encrypt(msg, &mut output, &mut tag);
+        format!(
+            "{}{}{}",
+            base16::encode_lower(&nonce),
+            base16::encode_lower(&tag),
+            base16::encode_lower(&output),
+            )
     }
 
     pub fn decrypt<T: AsRef<[u8]>>(&self, hex: T) -> Result<Vec<u8>, Error> {
-        let cipher = base16::decode(&hex)?;
-        open(&cipher, &self.public, &self.secret)
-            .map_err(|()| Error::InvalidMessage)
-    }
-}
-
-impl PartialEq for Keypair {
-    fn eq(&self, rhs: &Self) -> bool {
-        self.secret == rhs.secret
+        let noncetagcipher = base16::decode(&hex)?;
+        let nonce = &noncetagcipher[0..8];
+        let tag = &noncetagcipher[8..24];
+        let cipher = &noncetagcipher[24..];
+        let mut output: Vec<u8> = Vec::new();
+        output.resize(cipher.len(), 0);
+        let mut key = ChaCha20Poly1305::new(&self.key, nonce, &[]);
+        if key.decrypt(&cipher, &mut output, &tag) {
+            Ok(output)
+        } else {
+            Err(Error::InvalidMessage)
+        }
     }
 }
 

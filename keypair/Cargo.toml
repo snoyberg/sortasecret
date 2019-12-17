@@ -5,8 +5,9 @@ authors = ["Michael Snoyman <michael@snoyman.com>"]
 edition = "2018"
 
 [dependencies]
-sodiumoxide = "0.2.2"
+cryptoxide = "0.1.2"
 base16 = "0.1"
+rand = "0.7"
 
 [dev-dependencies]
 quickcheck = "0.8"

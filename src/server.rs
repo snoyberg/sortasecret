@@ -10,7 +10,6 @@ use hyper::body::Bytes;
 struct MyServer {
     script: Bytes,
     keypair: Keypair,
-    keypair_bytes: Bytes,
     homepage: Bytes,
     recaptcha_secret: String,
 }
@@ -19,11 +18,9 @@ pub async fn run(settings: Server) -> Result<(), Box<dyn std::error::Error>> {
     let script = make_script(&settings).into();
     let keypair = Keypair::decode(&settings.keypair)?;
     let homepage = make_homepage(&keypair).into();
-    let keypair_bytes = keypair.public_hex.clone().into();
     let my_server = MyServer {
         script,
         keypair,
-        keypair_bytes,
         homepage,
         recaptcha_secret: settings.recaptcha_secret,
     };
@@ -53,9 +50,6 @@ impl MyServer {
         Ok(match (req.method(), req.uri().path()) {
             (&hyper::Method::GET, "/") => {
                 self.homepage_html()
-            }
-            (&hyper::Method::GET, "/v1/pubkey") => {
-                self.pubkey()
             }
             (&hyper::Method::GET, "/v1/script.js") => {
                 self.script_js()
@@ -106,14 +100,6 @@ impl MyServer {
                     .unwrap()
             }
         })
-    }
-
-    fn pubkey(self: Arc<Self>) -> Response<Body> {
-        Response::builder()
-            .status(200)
-            .header("Content-Type", "text/plain")
-            .body(self.keypair_bytes.clone().into())
-            .unwrap()
     }
 
     fn encrypt(self: Arc<Self>, encreq: EncryptRequest) -> Response<Body> {
