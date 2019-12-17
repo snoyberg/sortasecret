@@ -1,6 +1,9 @@
 use keypair::Keypair;
 use askama::Template;
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::JsFuture;
 
 pub(crate) fn encrypt(url: &url::Url) -> Result<(u16, String), Box<dyn std::error::Error>> {
     match EncryptRequest::from_url(url) {
@@ -48,7 +51,6 @@ struct DecryptRequest {
     secrets: Vec<String>,
 }
 
-#[derive(Serialize, Debug)]
 struct VerifyRequest<'a> {
     secret: &'a str,
     response: String,
@@ -58,7 +60,9 @@ struct VerifyRequest<'a> {
 enum VerifyError {
     IO(std::io::Error),
     SerdeUrl(serde_urlencoded::ser::Error),
-    Surf(surf::Exception),
+    Js(JsValue),
+    SerdeJson(serde_json::error::Error),
+    NoWindow,
 }
 
 impl From<std::io::Error> for VerifyError {
@@ -73,6 +77,18 @@ impl From<serde_urlencoded::ser::Error> for VerifyError {
     }
 }
 
+impl From<serde_json::error::Error> for VerifyError {
+    fn from(e: serde_json::error::Error) -> Self {
+        VerifyError::SerdeJson(e)
+    }
+}
+
+impl From<JsValue> for VerifyError {
+    fn from(e: JsValue) -> Self {
+        VerifyError::Js(e)
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct VerifyResponse {
     success: bool,
@@ -83,14 +99,36 @@ struct DecryptResponse {
     decrypted: HashMap<String, String>,
 }
 
+pub fn worker_global_scope() -> Option<web_sys::ServiceWorkerGlobalScope> {
+    js_sys::global().dyn_into::<web_sys::ServiceWorkerGlobalScope>().ok()
+}
+
 async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, VerifyError> {
-    return Ok(VerifyResponse {success:true}); // FIXME remove
-    Ok(surf::post("https://www.google.com/recaptcha/api/siteverify")
-        .set_header("User-Agent", "surf")
-        .body_form(body)?
-        .await
-        .map_err(|e| VerifyError::Surf(e))?
-        .body_json().await?)
+    use web_sys::{Request, RequestInit, Response};
+    let mut opts = RequestInit::new();
+    opts.method("POST");
+    let form_data = web_sys::FormData::new()?; // web-sys should really require mut here...
+    form_data.append_with_str("secret", body.secret)?;
+    form_data.append_with_str("response", &body.response)?;
+    opts.body(Some(&form_data));
+    let request = Request::new_with_str_and_init(
+        "https://www.google.com/recaptcha/api/siteverify",
+        &opts,
+    )?;
+
+    request.headers().set("User-Agent", "surf")?;
+
+    let window = worker_global_scope().ok_or(VerifyError::NoWindow)?;
+
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+
+    let resp: Response = resp_value.dyn_into()?;
+
+    let json = JsFuture::from(resp.json()?).await?;
+
+    let verres: VerifyResponse = json.into_serde()?;
+
+    Ok(verres)
 }
 
 pub(crate) async fn decrypt(body: &str) -> (u16, String) {

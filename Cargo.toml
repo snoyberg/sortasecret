@@ -18,10 +18,21 @@ serde = "1.0.94"
 serde_derive = "1.0.94"
 serde_urlencoded = ""
 serde_json = ""
-surf = { version = "1.0.3", features = ["wasm-client"] }
 askama = "0.8.0"
 keypair = { path = "keypair" }
 url = "2.1"
+js-sys = "0.3.32"
+web-sys = { version = "0.3.4", features = [
+  'Headers',
+  'Request',
+  'RequestInit',
+  'RequestMode',
+  'Response',
+  'WorkerGlobalScope',
+  'ServiceWorkerGlobalScope',
+  'FormData',
+]}
+
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
