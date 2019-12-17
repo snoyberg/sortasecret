@@ -20,7 +20,6 @@ keypair = { path = "keypair" }
 [dev-dependencies]
 quickcheck = "0.8"
 quickcheck_macros = "0.8"
-tempfile = "3.1"
 
 [workspace]
 members = ["keypair", "genkeypair"]
