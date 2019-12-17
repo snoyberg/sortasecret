@@ -4,11 +4,12 @@ extern crate wasm_bindgen;
 extern crate serde_derive;
 
 mod utils;
+mod secrets;
+mod server;
 
 use cfg_if::cfg_if;
 use wasm_bindgen::prelude::*;
 use std::collections::HashMap;
-use askama::Template;
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -43,37 +44,28 @@ pub async fn respond_wrapper(req: JsValue) -> Result<JsValue, JsValue> {
     Ok(res)
 }
 
-#[derive(Template)]
-#[template(path = "homepage.html")]
-struct Homepage<'a> {
-    headers: &'a HashMap<String, String>
+fn html(status: u16, body: String) -> Response {
+    let mut headers = HashMap::new();
+    headers.insert("Content-Type".to_string(), "text/html; charset=utf-8".to_string());
+    Response { status, headers, body }
 }
 
-#[derive(Template)]
-#[template(path = "submit.html")]
-struct Submit<'a> {
-    body: &'a str,
+fn js(status: u16, body: String) -> Response {
+    let mut headers = HashMap::new();
+    headers.insert("Content-Type".to_string(), "text/javascript; charset=utf-8".to_string());
+    Response { status, headers, body }
 }
 
 async fn respond(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
-    let mut headers = HashMap::new();
-    headers.insert("Content-Type".to_string(), "text/html; charset=utf-8".to_string());
     let url: url::Url = req.url.parse()?;
-    let res = match url.path() {
-        "/" => Response {
-            status: 200,
-            headers,
-            body: Homepage { headers: &req.headers }.render()?  },
-        "/submit" => Response {
-            status: 200,
-            headers,
-            body: Submit { body: &req.body }.render()?
-        },
-        path => Response {
-            status: 404,
-            headers,
-            body: format!("Not found: {}", path),
-        },
+    let res = match (req.method == "GET", url.path()) {
+        (true, "/") => html(200, server::homepage_html()?),
+        (true, "/v1/script.js") => js(200, server::script_js()?),
+        (false, "/v1/decrypt") => {
+            let (status, body) = server::decrypt(&req.body).await;
+            html(status, body)
+        }
+        (_method, path) => html(404, format!("Not found: {}", path)),
     };
     Ok(res)
 }

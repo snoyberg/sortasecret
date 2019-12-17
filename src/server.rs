@@ -1,12 +1,8 @@
-use super::cli::Server;
 use keypair::Keypair;
-use std::sync::Arc;
-use std::collections::HashMap;
 use askama::Template;
-use hyper::{Request, Body, Response};
-use std::convert::Infallible;
-use hyper::body::Bytes;
+use std::collections::HashMap;
 
+/*
 struct MyServer {
     script: Bytes,
     keypair: Keypair,
@@ -48,29 +44,10 @@ pub async fn run(settings: Server) -> Result<(), Box<dyn std::error::Error>> {
 impl MyServer {
     async fn serve(self: Arc<Self>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
         Ok(match (req.method(), req.uri().path()) {
-            (&hyper::Method::GET, "/") => {
-                self.homepage_html()
-            }
-            (&hyper::Method::GET, "/v1/script.js") => {
-                self.script_js()
-            }
             (&hyper::Method::GET, "/v1/show") => {
                 match EncryptRequest::from_request(&req) {
                     Some(encreq) => {
                         self.show_html(encreq)
-                    }
-                    None => {
-                        Response::builder()
-                            .status(400)
-                            .body("Invalid parameters".into())
-                            .unwrap()
-                    }
-                }
-            }
-            (&hyper::Method::PUT, "/v1/decrypt") => {
-                match DecryptRequest::from_request(req).await {
-                    Some(decreq) => {
-                        decrypt(&self, decreq).await
                     }
                     None => {
                         Response::builder()
@@ -109,14 +86,6 @@ impl MyServer {
             .unwrap()
     }
 
-    fn script_js(self: Arc<Self>) -> Response<Body> {
-        Response::builder()
-            .status(200)
-            .header("Content-Type", "text/javascript; charset=utf-8")
-            .body(self.script.clone().into())
-            .unwrap()
-    }
-
     fn show_html(self: Arc<Self>, encreq: EncryptRequest) -> Response<Body> {
         // Check that the secret is actually valid. This also prevents an
         // XSS attack, since only simple hex values will be allowed
@@ -141,14 +110,9 @@ impl MyServer {
             }
         }
     }
+*/
 
-    fn homepage_html(self: Arc<Self>) -> Response<Body> {
-        Response::builder()
-            .status(200)
-            .header("Content-Type", "text/html; charset=utf-8")
-            .body(self.homepage.clone().into())
-            .unwrap()
-    }
+/*
 }
 
 #[derive(Deserialize, Debug)]
@@ -161,25 +125,12 @@ impl EncryptRequest {
         serde_urlencoded::from_str(req.uri().query()?).ok()
     }
 }
+*/
 
 #[derive(Deserialize, Debug)]
 struct DecryptRequest {
     token: String,
     secrets: Vec<String>,
-}
-
-impl DecryptRequest {
-    async fn from_request(mut req: Request<Body>) -> Option<Self> {
-        use futures_util::stream::StreamExt;
-
-        let mut res: Vec<u8> = Vec::new();
-        while let Some(chunk) = req.body_mut().next().await {
-            let chunk = chunk.ok()?;
-            res.extend(&chunk);
-        }
-        let decreq = serde_json::from_slice(&res).ok()?;
-        Some(decreq)
-    }
 }
 
 #[derive(Serialize, Debug)]
@@ -217,13 +168,8 @@ struct DecryptResponse {
     decrypted: HashMap<String, String>,
 }
 
-impl From<DecryptResponse> for Body {
-    fn from(decres: DecryptResponse) -> Self {
-        serde_json::to_vec(&decres).unwrap().into()
-    }
-}
-
 async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, VerifyError> {
+    return Ok(VerifyResponse { success: true }); // FIXME!
     Ok(surf::post("https://www.google.com/recaptcha/api/siteverify")
         .set_header("User-Agent", "surf")
         .body_form(body)?
@@ -232,30 +178,26 @@ async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, Ver
         .body_json().await?)
 }
 
-async fn decrypt(my_server: &MyServer, decreq: DecryptRequest) -> Response<Body> {
+pub(crate) async fn decrypt(body: &str) -> (u16, String) {
+    let decreq: DecryptRequest = match serde_json::from_str(body) {
+        Ok(x) => x,
+        Err(_) => return (400, "Invalid request".to_string()),
+    };
     let req = VerifyRequest {
-        // Looks like a copy of this data is necessary, see https://serde.rs/feature-flags.html#-features-rc
-        secret: &my_server.recaptcha_secret,
+        secret: super::secrets::RECAPTCHA_SECRET,
         response: decreq.token,
     };
     let secrets = decreq.secrets;
-
     let verres = site_verify(&req).await;
 
     match verres {
-        Err(err) => {
-            eprintln!("Error: {:?}", err);
-            Response::builder()
-                .status(500)
-                .body("An internal error occurred".into())
-                .unwrap()
-        }
+        Err(_err) => (500, "An internal error occurred".into()),
         Ok(res) => {
             if res.success {
                 let decrypted = secrets
                     .into_iter()
                     .map(|secret| {
-                        let cleartext = match my_server.keypair.decrypt(&secret) {
+                        let cleartext = match make_keypair().unwrap().decrypt(&secret) {
                             Err(e) => format!("Could not decrypt secret: {:?}", e),
                             Ok(vec) => match String::from_utf8(vec) {
                                 Ok(s) => s,
@@ -264,26 +206,30 @@ async fn decrypt(my_server: &MyServer, decreq: DecryptRequest) -> Response<Body>
                         };
                         (secret, cleartext)
                     })
-                .collect();
-                Response::builder()
-                    .status(200)
-                    .header("Content-Type", "application/json")
-                    .body(DecryptResponse {decrypted}.into())
-                    .unwrap()
+                    .collect();
+                (200, serde_json::to_string(&DecryptResponse {decrypted}).unwrap())
             } else {
-                Response::builder()
-                    .status(400)
-                    .body("Recaptcha fail".into())
-                    .unwrap()
+                (400, "Recaptcha fail".into())
             }
         }
     }
 }
 
+/*
 #[derive(Template)]
 #[template(path = "show-html.html")]
 struct ShowHtml<'a> {
     secret: &'a str,
+}
+*/
+
+fn make_keypair() -> Result<keypair::Keypair, keypair::Error> {
+    keypair::Keypair::decode(super::secrets::KEYPAIR)
+}
+
+pub(crate) fn homepage_html() -> Result<String, Box<dyn std::error::Error>> {
+    let keypair = make_keypair()?;
+    Ok(make_homepage(&keypair)?)
 }
 
 #[derive(Template)]
@@ -292,10 +238,10 @@ struct Homepage {
     secret: String,
 }
 
-fn make_homepage(keypair: &Keypair) -> String {
+fn make_homepage(keypair: &Keypair) -> Result<String, askama::Error> {
     Homepage {
         secret: keypair.encrypt("The secret message has now been decrypted, congratulations!"),
-    }.render().unwrap()
+    }.render()
 }
 
 #[derive(Template)]
@@ -304,8 +250,8 @@ struct Script<'a> {
     site: &'a str,
 }
 
-fn make_script(settings: &Server) -> String {
+pub(crate) fn script_js() -> Result<String, askama::Error> {
     Script {
-        site: &settings.recaptcha_site,
-    }.render().unwrap()
+        site: super::secrets::RECAPTCHA_SITE,
+    }.render()
 }
