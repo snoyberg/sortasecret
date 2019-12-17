@@ -65,6 +65,14 @@ async fn respond(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
             let (status, body) = server::decrypt(&req.body).await;
             html(status, body)
         }
+        (true, "/v1/encrypt") => {
+            let (status, body) = server::encrypt(&req.url.parse()?)?;
+            html(status, body)
+        }
+        (true, "/v1/show") => {
+            let (status, body) = server::show_html(&req.url.parse()?)?;
+            html(status, body)
+        }
         (_method, path) => html(404, format!("Not found: {}", path)),
     };
     Ok(res)

@@ -18,7 +18,7 @@ serde = "1.0.94"
 serde_derive = "1.0.94"
 serde_urlencoded = ""
 serde_json = ""
-surf = "1.0.3"
+surf = { version = "1.0.3", features = ["wasm-client"] }
 askama = "0.8.0"
 keypair = { path = "keypair" }
 url = "2.1"

@@ -2,117 +2,33 @@ use keypair::Keypair;
 use askama::Template;
 use std::collections::HashMap;
 
-/*
-struct MyServer {
-    script: Bytes,
-    keypair: Keypair,
-    homepage: Bytes,
-    recaptcha_secret: String,
-}
-
-pub async fn run(settings: Server) -> Result<(), Box<dyn std::error::Error>> {
-    let script = make_script(&settings).into();
-    let keypair = Keypair::decode(&settings.keypair)?;
-    let homepage = make_homepage(&keypair).into();
-    let my_server = MyServer {
-        script,
-        keypair,
-        homepage,
-        recaptcha_secret: settings.recaptcha_secret,
-    };
-
-    let my_server = Arc::new(my_server);
-
-    let addr = settings.bind.parse()?;
-
-    let my_service = move |req: Request<Body>| {
-        my_server.clone().serve(req)
-    };
-    let make_my_service = move |_conn: &hyper::server::conn::AddrStream| {
-        let my_service = my_service.clone();
-        async move {
-            Ok::<_, Infallible>(hyper::service::service_fn(my_service))
+pub(crate) fn encrypt(url: &url::Url) -> Result<(u16, String), Box<dyn std::error::Error>> {
+    match EncryptRequest::from_url(url) {
+        Some(encreq) => {
+            let keypair = make_keypair()?;
+            let encrypted = keypair.encrypt(&encreq.secret)?;
+            Ok((200, encrypted))
         }
-    };
-    hyper::Server::bind(&addr)
-        .serve(hyper::service::make_service_fn(make_my_service))
-        .await?;
-
-    Ok(())
+        None => Ok((400, "Invalid parameters".into())),
+    }
 }
 
-impl MyServer {
-    async fn serve(self: Arc<Self>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-        Ok(match (req.method(), req.uri().path()) {
-            (&hyper::Method::GET, "/v1/show") => {
-                match EncryptRequest::from_request(&req) {
-                    Some(encreq) => {
-                        self.show_html(encreq)
-                    }
-                    None => {
-                        Response::builder()
-                            .status(400)
-                            .body("Invalid parameters".into())
-                            .unwrap()
-                    }
-                }
-            }
-            (&hyper::Method::GET, "/v1/encrypt") => {
-                match EncryptRequest::from_request(&req) {
-                    Some(encreq) => {
-                        self.encrypt(encreq)
-                    }
-                    None => {
-                        Response::builder()
-                            .status(400)
-                            .body("Invalid parameters".into())
-                            .unwrap()
-                    }
-                }
-            }
-            _ => {
-                Response::builder()
-                    .status(404)
-                    .body("Not found".into())
-                    .unwrap()
-            }
-        })
-    }
-
-    fn encrypt(self: Arc<Self>, encreq: EncryptRequest) -> Response<Body> {
-        Response::builder()
-            .status(200)
-            .body(self.keypair.encrypt(&encreq.secret).into())
-            .unwrap()
-    }
-
-    fn show_html(self: Arc<Self>, encreq: EncryptRequest) -> Response<Body> {
+pub(crate) fn show_html(url: &url::Url) -> Result<(u16, String), Box<dyn std::error::Error>> {
+    match EncryptRequest::from_url(url) {
         // Check that the secret is actually valid. This also prevents an
         // XSS attack, since only simple hex values will be allowed
         // through.
-        match self.keypair.decrypt(&encreq.secret) {
+        Some(encreq) => match make_keypair()?.decrypt(&encreq.secret) {
             Ok(_) => {
                 let html = ShowHtml {
                     secret: &encreq.secret,
-                }.render().unwrap();
-                Response::builder()
-                    .status(200)
-                    .header("Content-Type", "text/html; charset=utf-8")
-                    .body(html.into())
-                    .unwrap()
+                }.render()?;
+                Ok((200, html))
             }
-            Err(e) => {
-                eprintln!("{:?} {}", e, encreq.secret);
-                Response::builder()
-                    .status(400)
-                    .body("Invalid secret".into())
-                    .unwrap()
-            }
+            Err(e) => Ok((400, "Invalid secret".into())),
         }
+        None => Ok((400, "Invalid parameters".into())),
     }
-*/
-
-/*
 }
 
 #[derive(Deserialize, Debug)]
@@ -121,11 +37,10 @@ struct EncryptRequest {
 }
 
 impl EncryptRequest {
-    fn from_request(req: &Request<Body>) -> Option<Self> {
-        serde_urlencoded::from_str(req.uri().query()?).ok()
+    fn from_url(url: &url::Url) -> Option<Self> {
+        serde_urlencoded::from_str(url.query()?).ok()
     }
 }
-*/
 
 #[derive(Deserialize, Debug)]
 struct DecryptRequest {
@@ -169,7 +84,7 @@ struct DecryptResponse {
 }
 
 async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, VerifyError> {
-    return Ok(VerifyResponse { success: true }); // FIXME!
+    return Ok(VerifyResponse {success:true}); // FIXME remove
     Ok(surf::post("https://www.google.com/recaptcha/api/siteverify")
         .set_header("User-Agent", "surf")
         .body_form(body)?
@@ -215,13 +130,11 @@ pub(crate) async fn decrypt(body: &str) -> (u16, String) {
     }
 }
 
-/*
 #[derive(Template)]
 #[template(path = "show-html.html")]
 struct ShowHtml<'a> {
     secret: &'a str,
 }
-*/
 
 fn make_keypair() -> Result<keypair::Keypair, keypair::Error> {
     keypair::Keypair::decode(super::secrets::KEYPAIR)
