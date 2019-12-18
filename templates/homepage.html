@@ -1,12 +1,178 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="no-js">
   <head>
-    <title>Sorta Secret</title>
-  </head>
-  <body>
+
+    <!-- Meta -->
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>Sorta Secret - Serverless Rust demo</title>
+
+    
+
+    <meta name="twitter:site" content="@FPComplete">
+    <meta name="twitter:creator" content="@FPComplete">
+    <meta name="og:site_name" content="Sorta Secret">
+    <meta name="twitter:card" content="summary">
+
+    
+    <meta name="og:title" content="FP Complete Technology Homepage">
+    
+
+    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">  
+    <script src="https://kit.fontawesome.com/ed5ab29d5a.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" type="text/css" href="https://tech.fpcomplete.com/assets/vendors/slick-carousel/slick.css"> 
+    <link rel="stylesheet" type="text/css" href="https://tech.fpcomplete.com/assets/css/styles.css">
     <script src="/v1/script.js"></script>
-    <h1>Sorta Secret</h1>
-    <p><a href="javascript:sortasecret()">Decrypt the secrets below!</a></p>
-    <p data-sortasecret="{{ secret }}"><i>This is a secret</i></p>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-36928035-7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'UA-36928035-7');
+    </script>
+
+    
+    
+  </head>
+
+  <body>
+    <header class="inner-page">
+      <nav class="js-navbar-scroll navbar fixed-top navbar-expand-lg">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="/">
+            <img src="https://tech.fpcomplete.com/images/fp-complete-logo-small.png" alt="FP Complete">
+          </a>
+          <button
+              class="navbar-toggler" type="button"
+              data-toggle="collapse"
+              data-target="#navbarTogglerDemo"
+
+              aria-controls="navbarTogglerDemo"
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <div class="collapse navbar-collapse onCollapse" id="navbarTogglerDemo"> 
+            <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+              <li class="nav-item mr-4 mb-2 mb-lg-0">
+                <a class="nav-link" href="https://tech.fpcomplete.com/blog/">Blog</a>
+              </li>
+              <li class="nav-item mr-4 mb-2 mb-lg-0">
+                <a class="nav-link" href="https://tech.fpcomplete.com/rust/">Rust</a>
+              </li>
+              <li class="nav-item mr-4 mb-2 mb-lg-0">
+                <a class="nav-link" href="https://tech.fpcomplete.com/devops/">DevOps</a>
+              </li>
+              <li class="nav-item mr-4 mb-2 mb-lg-0">
+                <a class="nav-link" href="https://tech.fpcomplete.com/jobs/">Jobs</a>
+              </li>
+              <li class="nav-item mr-4 mb-2 mb-lg-0">
+                <a class="nav-link" href="https://tech.fpcomplete.com/haskell/">Haskell</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+	  <section class="wt-section bg-gray text-center inner-page-header" style="padding-top:0.5rem;padding-bottom:0.5rem"> 
+        <div class="container">
+          <div class="row justify-content-md-center align-items-center text-white py-lg-5">
+            <div class="col-md-7">
+              <div class="text-center">
+                <h1 class="display-sm-4 display-lg-3">Sorta Secret</h1>
+                <p class="h6 text-uppercase wt-letter-spacing-sm mb-0">Demonstrating Serverless Rust using WASM and Cloudflare Workers</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </header>
+
+    <main role="main">
+      <section class="wt-section bg-light" style="padding-top:1rem">
+        <div class="container">
+          <div class="alert alert-info" style="margin-top:0.5em;margin-bottom:2em">
+            <button class="btn btn-info" onclick="sortasecret()" style="margin-right: 1em">Show me the secret</button>
+            <b data-sortasecret="{{ secret }}">Not showing you the secret yet...</b>
+          </div>
+
+          <h2>What is this?</h2>
+
+          <p>Sorta Secret is a simple web app that helps with blocking bots and web scrapers from reading semi-secret information. A great use case&mdash;and the reason this came into existence&mdash;is to allow real people to get someone's email address from a webpage without encouraging spammers.</p>
+
+          <p><small>If you're familiar with it, this is similar to what Mailhide did before it was turned offline.</small></p>
+
+          <p>This app is written in Rust, and is an <a href="https://tech.fpcomplete.com/rust">FP Complete demonstration</a> of using Cloudflare Workers, Rust, and Web Assembly to create globally distributed, scalable, low maintenance, and robust applications using a "serverless" architecture.</p>
+
+          <p>Want to learn more? We'll be publishing a blog post in the next few weeks about this on the <a href="https://tech.fpcomplete.com/blog/">FP Complete tech blog</a>, stay tuned there for more information. You can also sign up for our <a href="https://tech.fpcomplete.com/rust/signup">Rust</a> and <a href="https://tech.fpcomplete.com/devops/signup">DevOps</a> mailing lists.</p>
+
+          <p>Source code is <a href="https://github.com/snoyberg/sortasecret">available on Github</a>.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="bg-dark py-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-8 text-center text-md-left mb-3 mb-md-0">
+            <small>
+              2019 FP Complete Corp.
+            </small>
+          </div>
+
+          <div class="col-md-4 align-self-center">
+            <ul class="list-inline text-center text-md-right mb-0">
+              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="Facebook">
+                <a target="_blank" href="https://www.facebook.com/FPComplete">
+                  <i class="fab fa-facebook"></i>
+                </a>
+              </li>
+              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="Twitter">
+                <a target="_blank" href="https://twitter.com/FPComplete">
+                  <i class="fab fa-twitter"></i>
+                </a>
+              </li>
+              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="Github">
+                <a target="_blank" href="https://github.com/fpco">
+                  <i class="fab fa-github"></i>
+                </a>
+              </li>
+              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="YouTube">
+                <a target="_blank" href="https://www.youtube.com/user/FPComplete">
+                  <i class="fab fa-youtube"></i>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    
+
+    <!-- JS Script Files -->
+    <!-- Global Vendor -->
+    <script src="https://tech.fpcomplete.com/assets/vendors/jquery.min.js"></script>
+    <script src="https://tech.fpcomplete.com/assets/vendors/jquery.migrate.min.js"></script>
+    <script src="https://tech.fpcomplete.com/assets/vendors/popper.min.js"></script>
+    <script src="https://tech.fpcomplete.com/assets/vendors/bootstrap/js/bootstrap.min.js"></script>
+
+    <!-- Components Vendor  --> 
+    <script src="https://tech.fpcomplete.com/assets/vendors/slick-carousel/slick.min.js"></script>
+
+    <!--Plugin Initialize-->
+    <script src="https://tech.fpcomplete.com/assets/js/global.js"></script>
+
+    <!-- Theme Components and Settings --> 
+    <script src="https://tech.fpcomplete.com/assets/vendors/carousel.js"></script>
+
+    
+	
+    <!-- END JAVASCRIPTS -->
   </body>
 </html>

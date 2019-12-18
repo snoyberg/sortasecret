@@ -23,8 +23,8 @@ pub(crate) fn show_html(url: &url::Url) -> Result<(u16, String), Box<dyn std::er
         // through.
         Some(encreq) => match make_keypair()?.decrypt(&encreq.secret) {
             Ok(_) => {
-                let html = ShowHtml {
-                    secret: &encreq.secret,
+                let html = Homepage {
+                    secret: encreq.secret,
                 }.render()?;
                 Ok((200, html))
             }
@@ -166,12 +166,6 @@ pub(crate) async fn decrypt(body: &str) -> (u16, String) {
             }
         }
     }
-}
-
-#[derive(Template)]
-#[template(path = "show-html.html")]
-struct ShowHtml<'a> {
-    secret: &'a str,
 }
 
 fn make_keypair() -> Result<keypair::Keypair, keypair::Error> {
