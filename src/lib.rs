@@ -56,8 +56,23 @@ fn js(status: u16, body: String) -> Response {
     Response { status, headers, body }
 }
 
+fn redirect_to_www(mut url: url::Url) -> Result<Response, url::ParseError> {
+    url.set_host(Some("www.sortasecret.com"))?;
+    let mut headers = HashMap::new();
+    headers.insert("Location".to_string(), url.to_string());
+    Ok(Response {
+        status: 307,
+        body: format!("Redirecting to {}", url),
+        headers,
+    })
+}
+
 async fn respond(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
     let url: url::Url = req.url.parse()?;
+
+    if url.host_str() == Some("sortasecret.com") {
+        return Ok(redirect_to_www(url)?);
+    }
     let res = match (req.method == "GET", url.path()) {
         (true, "/") => html(200, server::homepage_html()?),
         (true, "/v1/script.js") => js(200, server::script_js()?),
