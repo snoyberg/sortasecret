@@ -1,6 +1,6 @@
 name = "sortasecret"
 type = "rust"
 account_id = "912f6b3f9e95d44a81552fb8b5a4ac86"
-workers_dev = true
-route = ""
-zone_id = ""
+workers_dev = false
+zone_id = "b916bd8bc6a16c4ce22ba531786312ee"
+route = "www.sortasecret.com/*"
