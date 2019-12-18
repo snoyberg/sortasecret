@@ -4,3 +4,4 @@
 *~
 *.swp
 src/secrets.rs
+/worker/generated/
