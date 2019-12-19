@@ -4,7 +4,7 @@ use clap::{App, Arg};
 
 fn main() -> Result<(), keypair::Error> {
     let filename = parse_command();
-    let keypair = Keypair::generate();
+    let keypair = Keypair::generate()?;
     match filename {
         None => {
             let bytes = keypair.encode();
