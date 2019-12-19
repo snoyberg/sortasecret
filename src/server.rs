@@ -62,7 +62,7 @@ enum VerifyError {
     SerdeUrl(serde_urlencoded::ser::Error),
     Js(JsValue),
     SerdeJson(serde_json::error::Error),
-    NoWindow,
+    NoGlobal,
 }
 
 impl From<std::io::Error> for VerifyError {
@@ -116,16 +116,12 @@ async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, Ver
         &opts,
     )?;
 
-    request.headers().set("User-Agent", "surf")?;
+    request.headers().set("User-Agent", "sortasecret")?;
 
-    let window = worker_global_scope().ok_or(VerifyError::NoWindow)?;
-
-    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
-
+    let global = worker_global_scope().ok_or(VerifyError::NoGlobal)?;
+    let resp_value = JsFuture::from(global.fetch_with_request(&request)).await?;
     let resp: Response = resp_value.dyn_into()?;
-
     let json = JsFuture::from(resp.json()?).await?;
-
     let verres: VerifyResponse = json.into_serde()?;
 
     Ok(verres)
