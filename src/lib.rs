@@ -73,7 +73,7 @@ async fn respond(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
     if url.host_str() == Some("sortasecret.com") {
         return Ok(redirect_to_www(url)?);
     }
-    let res = match (req.method == "GET", url.path()) {
+    Ok(match (req.method == "GET", url.path()) {
         (true, "/") => html(200, server::homepage_html()?),
         (true, "/v1/script.js") => js(200, server::script_js()?),
         (false, "/v1/decrypt") => {
@@ -89,6 +89,5 @@ async fn respond(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
             html(status, body)
         }
         (_method, path) => html(404, format!("Not found: {}", path)),
-    };
-    Ok(res)
+    })
 }
