@@ -28,8 +28,5 @@ async function handleRequest(request) {
         url: request.url,
         body: body,
     })
-    return new Response(response.body, {
-        status: response.status,
-        headers: response.headers,
-    })
+    return response
 }

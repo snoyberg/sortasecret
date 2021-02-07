@@ -25,16 +25,19 @@ askama = "0.8.0"
 keypair = { path = "keypair" }
 url = "2.1"
 js-sys = "0.3.32"
-web-sys = { version = "0.3.4", features = [
+web-sys = { version = "0.3.47", features = [
   'Headers',
   'Request',
   'RequestInit',
   'RequestMode',
   'Response',
+  'ResponseInit',
   'WorkerGlobalScope',
   'ServiceWorkerGlobalScope',
   'FormData',
 ]}
+rust-embed = "5.8"
+mime_guess = "2"
 
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
