@@ -158,6 +158,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b486f0f6730b6972b7831f0faf2dc7c3280aab69bc07357c7a2f24042b945e36"
 
 [[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
 name = "dtoa"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -672,6 +678,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ecf3b85f68e8abaa7555aa5abdb1153079387e60b718283d732f03897fcfc86"
 
 [[package]]
+name = "snafu"
+version = "0.6.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eab12d3c261b2308b0d80c26fffb58d17eba81a4be97890101f416b478c79ca7"
+dependencies = [
+ "doc-comment",
+ "snafu-derive",
+]
+
+[[package]]
+name = "snafu-derive"
+version = "0.6.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1508efa03c362e23817f96cde18abed596a25219a8b2c66e8db33c03543d315b"
+dependencies = [
+ "proc-macro2 1.0.24",
+ "quote 1.0.2",
+ "syn 1.0.60",
+]
+
+[[package]]
 name = "sortasecret"
 version = "0.1.0"
 dependencies = [
@@ -686,6 +713,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_urlencoded",
+ "snafu",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",

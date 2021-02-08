@@ -3,14 +3,16 @@ extern crate wasm_bindgen;
 #[macro_use]
 extern crate serde_derive;
 
-mod utils;
+mod cloudflare;
 mod secrets;
 mod server;
+mod utils;
 
 use cfg_if::cfg_if;
-use wasm_bindgen::prelude::*;
-use std::collections::HashMap;
 use rust_embed::RustEmbed;
+use snafu::{ResultExt, Snafu};
+use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
 
 #[derive(RustEmbed)]
 #[folder = "static/"]
@@ -33,48 +35,83 @@ pub struct Response {
     body: Vec<u8>,
 }
 
-impl Response {
-    fn into_web_response(mut self) -> Result<web_sys::Response, JsValue> {
-        let mut init = web_sys::ResponseInit::new();
+type Result<T, E = Error> = std::result::Result<T, E>;
 
-        let headers = wasm_bindgen::JsValue::from_serde(&self.headers).map_err(|e| format!("Could not convert headers: {}", e))?;
-        init.status(self.status);
-        init.headers(&headers);
-        web_sys::Response::new_with_opt_u8_array_and_init(Some(&mut self.body), &init)
+#[derive(Snafu, Debug)]
+enum Error {
+    #[snafu(display("Could not parse URL {}: {}", url, source))]
+    UrlParse {
+        url: String,
+        source: url::ParseError,
+    },
+    #[snafu(display("Error from server code: {}", source))]
+    Server { source: Box<dyn std::error::Error> },
+    #[snafu(display("{}", source))]
+    Cloudflare { source: cloudflare::Error },
+    #[snafu(display("Could not convert headers: {}", source))]
+    CouldNotConvertHeaders { source: serde_json::Error },
+    #[snafu(display("Could not create new Response: {:?}", error))]
+    CouldNotCreateResponse { error: JsValue },
+    #[snafu(display("Error with askama template: {}", source))]
+    Askama {
+        source: askama::Error,
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Request {
-    method: String,
-    headers: HashMap<String, String>,
-    url: String,
-    body: String, // FIXME work with binary data
+impl Response {
+    fn into_web_response(mut self) -> Result<web_sys::Response> {
+        let mut init = web_sys::ResponseInit::new();
+
+        let headers =
+            wasm_bindgen::JsValue::from_serde(&self.headers).context(CouldNotConvertHeaders)?;
+        init.status(self.status);
+        init.headers(&headers);
+        web_sys::Response::new_with_opt_u8_array_and_init(Some(&mut self.body), &init)
+            .map_err(|e| Error::CouldNotCreateResponse { error: e })
+    }
 }
 
 #[wasm_bindgen]
-pub async fn respond_wrapper(req: JsValue) -> Result<web_sys::Response, JsValue> {
-    let req = req.into_serde().map_err(|e| e.to_string())?;
-    let res = respond(req).await.map_err(|e| e.to_string())?;
-    res.into_web_response()
+pub async fn respond_wrapper(req: web_sys::Request) -> Result<web_sys::Response, JsValue> {
+    respond(req).await.and_then(|r| r.into_web_response())
+    .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 fn html(status: u16, body: String) -> Response {
     let mut headers = HashMap::new();
-    headers.insert("Content-Type".to_string(), "text/html; charset=utf-8".to_string());
-    Response { status, headers, body: body.into_bytes() }
+    headers.insert(
+        "Content-Type".to_string(),
+        "text/html; charset=utf-8".to_string(),
+    );
+    Response {
+        status,
+        headers,
+        body: body.into_bytes(),
+    }
 }
 
 fn js(status: u16, body: String) -> Response {
     let mut headers = HashMap::new();
-    headers.insert("Content-Type".to_string(), "text/javascript; charset=utf-8".to_string());
-    Response { status, headers, body: body.into_bytes() }
+    headers.insert(
+        "Content-Type".to_string(),
+        "text/javascript; charset=utf-8".to_string(),
+    );
+    Response {
+        status,
+        headers,
+        body: body.into_bytes(),
+    }
 }
 
 fn serve_static(name: &str) -> Option<Response> {
     let content = Static::get(name)?;
     let mut headers = HashMap::new();
-    headers.insert("Content-Type".to_string(), mime_guess::from_path(name).first_or_octet_stream().to_string());
+    headers.insert(
+        "Content-Type".to_string(),
+        mime_guess::from_path(name)
+            .first_or_octet_stream()
+            .to_string(),
+    );
     Some(Response {
         status: 200,
         headers,
@@ -82,29 +119,37 @@ fn serve_static(name: &str) -> Option<Response> {
     })
 }
 
-async fn respond(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
-    let url: url::Url = req.url.parse()?;
+async fn respond(req: web_sys::Request) -> Result<Response> {
+    let url_string = req.url();
+    let url: url::Url = url_string.parse().with_context(|| UrlParse {
+        url: url_string.clone(),
+    })?;
 
-    Ok(match (req.method == "GET", url.path()) {
-        (true, "/") => html(200, server::homepage_html()?),
-        (true, "/v1/script.js") => js(200, server::script_js()?),
+    Ok(match (req.method() == "GET", url.path()) {
+        (true, "/") => html(200, server::homepage_html().context(Server)?),
+        (true, "/v1/script.js") => js(200, server::script_js().context(Askama)?),
         (false, "/v1/decrypt") => {
-            let (status, body) = server::decrypt(&req.body).await;
+            let text = cloudflare::request_text(&req).await.context(Cloudflare)?;
+            let (status, body) = server::decrypt(&text).await;
             html(status, body)
         }
         (true, "/v1/encrypt") => {
-            let (status, body) = server::encrypt(&req.url.parse()?)?;
+            let (status, body) = server::encrypt(&url).context(Server)?;
             html(status, body)
         }
         (true, "/v1/show") => {
-            let (status, body) = server::show_html(&req.url.parse()?)?;
+            let (status, body) = server::show_html(&url).context(Server)?;
             html(status, body)
         }
         (true, "/favicon.ico") => serve_static("favicon.ico").expect("Missing a favicon"),
         (method, path) => {
             let ores = (|| {
-                if !method { return None; }
-                if !path.starts_with("/static/") { return None; }
+                if !method {
+                    return None;
+                }
+                if !path.starts_with("/static/") {
+                    return None;
+                }
                 serve_static(&path[8..])
             })();
             ores.unwrap_or_else(|| html(404, format!("Not found: {}", path)))

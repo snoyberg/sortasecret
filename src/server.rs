@@ -1,5 +1,5 @@
-use keypair::Keypair;
 use askama::Template;
+use keypair::Keypair;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
@@ -25,11 +25,12 @@ pub(crate) fn show_html(url: &url::Url) -> Result<(u16, String), Box<dyn std::er
             Ok(_) => {
                 let html = Homepage {
                     secret: encreq.secret,
-                }.render()?;
+                }
+                .render()?;
                 Ok((200, html))
             }
             Err(_e) => Ok((400, "Invalid secret".into())),
-        }
+        },
         None => Ok((400, "Invalid parameters".into())),
     }
 }
@@ -100,7 +101,9 @@ struct DecryptResponse {
 }
 
 pub fn worker_global_scope() -> Option<web_sys::ServiceWorkerGlobalScope> {
-    js_sys::global().dyn_into::<web_sys::ServiceWorkerGlobalScope>().ok()
+    js_sys::global()
+        .dyn_into::<web_sys::ServiceWorkerGlobalScope>()
+        .ok()
 }
 
 async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, VerifyError> {
@@ -111,10 +114,8 @@ async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, Ver
     form_data.append_with_str("secret", body.secret)?;
     form_data.append_with_str("response", &body.response)?;
     opts.body(Some(&form_data));
-    let request = Request::new_with_str_and_init(
-        "https://www.google.com/recaptcha/api/siteverify",
-        &opts,
-    )?;
+    let request =
+        Request::new_with_str_and_init("https://www.google.com/recaptcha/api/siteverify", &opts)?;
 
     request.headers().set("User-Agent", "sortasecret")?;
 
@@ -151,12 +152,15 @@ pub(crate) async fn decrypt(body: &str) -> (u16, String) {
                             Ok(vec) => match String::from_utf8(vec) {
                                 Ok(s) => s,
                                 Err(e) => format!("Invalid UTF-8 value: {:?}", e),
-                            }
+                            },
                         };
                         (secret, cleartext)
                     })
                     .collect();
-                (200, serde_json::to_string(&DecryptResponse {decrypted}).unwrap())
+                (
+                    200,
+                    serde_json::to_string(&DecryptResponse { decrypted }).unwrap(),
+                )
             } else {
                 (400, "Recaptcha fail".into())
             }
@@ -182,7 +186,8 @@ struct Homepage {
 fn make_homepage(keypair: &Keypair) -> Result<String, Box<dyn std::error::Error>> {
     Ok(Homepage {
         secret: keypair.encrypt("The secret message has now been decrypted, congratulations!")?,
-    }.render()?)
+    }
+    .render()?)
 }
 
 #[derive(Template)]
@@ -194,5 +199,6 @@ struct Script<'a> {
 pub(crate) fn script_js() -> Result<String, askama::Error> {
     Script {
         site: super::secrets::RECAPTCHA_SITE,
-    }.render()
+    }
+    .render()
 }

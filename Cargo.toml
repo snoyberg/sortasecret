@@ -38,6 +38,7 @@ web-sys = { version = "0.3.47", features = [
 ]}
 rust-embed = "5.8"
 mime_guess = "2"
+snafu = "0.6"
 
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

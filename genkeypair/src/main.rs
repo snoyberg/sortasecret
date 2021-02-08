@@ -1,6 +1,6 @@
+use clap::{App, Arg};
 use keypair::Keypair;
 use std::io::{stdout, Write};
-use clap::{App, Arg};
 
 fn main() -> Result<(), keypair::Error> {
     let filename = parse_command();
@@ -31,11 +31,12 @@ where
         .version("0.1")
         .author("Michael Snoyman <michael@snoyman.com>")
         .about("Generates keypairs for SortaSecret web app")
-        .arg(Arg::with_name("file")
-             .help("Filename to write key to, if omitted writes to stdout")
-             .long("file")
-             .value_name("file")
-            )
+        .arg(
+            Arg::with_name("file")
+                .help("Filename to write key to, if omitted writes to stdout")
+                .long("file")
+                .value_name("file"),
+        )
         .get_matches_from_safe(args)?;
     Ok(matches.value_of("file").map(|s| s.to_string()))
 }

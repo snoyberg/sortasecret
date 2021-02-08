@@ -6,9 +6,9 @@ extern crate quickcheck;
 #[macro_use(quickcheck)]
 extern crate quickcheck_macros;
 
-use std::path::Path;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use cryptoxide::chacha20poly1305::ChaCha20Poly1305;
 
@@ -27,8 +27,7 @@ pub enum Error {
     Getrandom(getrandom::Error),
 }
 
-impl std::error::Error for Error {
-}
+impl std::error::Error for Error {}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -108,7 +107,7 @@ impl Keypair {
             base16::encode_lower(&nonce),
             base16::encode_lower(&tag),
             base16::encode_lower(&output),
-            ))
+        ))
     }
 
     pub fn decrypt<T: AsRef<[u8]>>(&self, hex: T) -> Result<Vec<u8>, Error> {
@@ -169,6 +168,9 @@ mod test {
     #[quickcheck]
     fn prop_encrypt_decrypt(secret: String) {
         let keypair = Keypair::generate().unwrap();
-        assert_eq!(secret.as_bytes()[..], keypair.decrypt(keypair.encrypt(&secret).unwrap()).unwrap()[..])
+        assert_eq!(
+            secret.as_bytes()[..],
+            keypair.decrypt(keypair.encrypt(&secret).unwrap()).unwrap()[..]
+        )
     }
 }
