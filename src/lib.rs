@@ -53,9 +53,7 @@ enum Error {
     #[snafu(display("Could not create new Response: {:?}", error))]
     CouldNotCreateResponse { error: JsValue },
     #[snafu(display("Error with askama template: {}", source))]
-    Askama {
-        source: askama::Error,
-    }
+    Askama { source: askama::Error },
 }
 
 impl Response {
@@ -73,8 +71,10 @@ impl Response {
 
 #[wasm_bindgen]
 pub async fn respond_wrapper(req: web_sys::Request) -> Result<web_sys::Response, JsValue> {
-    respond(req).await.and_then(|r| r.into_web_response())
-    .map_err(|e| JsValue::from_str(&e.to_string()))
+    respond(req)
+        .await
+        .and_then(|r| r.into_web_response())
+        .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 fn html(status: u16, body: String) -> Response {
