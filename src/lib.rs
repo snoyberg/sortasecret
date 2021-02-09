@@ -9,9 +9,9 @@ mod server;
 mod utils;
 
 use cfg_if::cfg_if;
+use cloudflare::{html, js, static_file};
 use rust_embed::RustEmbed;
 use snafu::{ResultExt, Snafu};
-use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
 #[derive(RustEmbed)]
@@ -26,13 +26,6 @@ cfg_if! {
         #[global_allocator]
         static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
     }
-}
-
-#[derive(Serialize)]
-pub struct Response {
-    status: u16,
-    headers: HashMap<String, String>,
-    body: Vec<u8>,
 }
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -54,18 +47,22 @@ enum Error {
     CouldNotCreateResponse { error: JsValue },
     #[snafu(display("Error with askama template: {}", source))]
     Askama { source: askama::Error },
+    #[snafu(display("Not found: {}", path))]
+    NotFound { path: String },
 }
 
-impl Response {
-    fn into_web_response(mut self) -> Result<web_sys::Response> {
-        let mut init = web_sys::ResponseInit::new();
-
-        let headers =
-            wasm_bindgen::JsValue::from_serde(&self.headers).context(CouldNotConvertHeaders)?;
-        init.status(self.status);
-        init.headers(&headers);
-        web_sys::Response::new_with_opt_u8_array_and_init(Some(&mut self.body), &init)
-            .map_err(|e| Error::CouldNotCreateResponse { error: e })
+impl Error {
+    fn into_response(self) -> Result<web_sys::Response> {
+        let status = match self {
+            Error::NotFound { .. } => 404,
+            Error::UrlParse { .. } => 400,
+            _ => 500,
+        };
+        html(
+            status,
+            format!("<!DOCTYPE html><html><head><title>{error}</title></head><body><h1>Error occurred</h1><pre>{error}</pre></body></html>", error = self),
+        )
+        .context(Cloudflare)
     }
 }
 
@@ -73,86 +70,55 @@ impl Response {
 pub async fn respond_wrapper(req: web_sys::Request) -> Result<web_sys::Response, JsValue> {
     respond(req)
         .await
-        .and_then(|r| r.into_web_response())
+        .map(Ok)
+        .unwrap_or_else(Error::into_response)
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
-fn html(status: u16, body: String) -> Response {
-    let mut headers = HashMap::new();
-    headers.insert(
-        "Content-Type".to_string(),
-        "text/html; charset=utf-8".to_string(),
-    );
-    Response {
-        status,
-        headers,
-        body: body.into_bytes(),
-    }
+fn serve_static(url: &url::Url, name: &str) -> Result<web_sys::Response> {
+    let content = Static::get(name).ok_or_else(|| Error::NotFound {
+        path: url.path().to_owned(),
+    })?;
+    static_file(200, name, content.into()).context(Cloudflare)
 }
 
-fn js(status: u16, body: String) -> Response {
-    let mut headers = HashMap::new();
-    headers.insert(
-        "Content-Type".to_string(),
-        "text/javascript; charset=utf-8".to_string(),
-    );
-    Response {
-        status,
-        headers,
-        body: body.into_bytes(),
-    }
-}
-
-fn serve_static(name: &str) -> Option<Response> {
-    let content = Static::get(name)?;
-    let mut headers = HashMap::new();
-    headers.insert(
-        "Content-Type".to_string(),
-        mime_guess::from_path(name)
-            .first_or_octet_stream()
-            .to_string(),
-    );
-    Some(Response {
-        status: 200,
-        headers,
-        body: content.into(),
-    })
-}
-
-async fn respond(req: web_sys::Request) -> Result<Response> {
+async fn respond(req: web_sys::Request) -> Result<web_sys::Response> {
     let url_string = req.url();
     let url: url::Url = url_string.parse().with_context(|| UrlParse {
         url: url_string.clone(),
     })?;
 
     Ok(match (req.method() == "GET", url.path()) {
-        (true, "/") => html(200, server::homepage_html().context(Server)?),
-        (true, "/v1/script.js") => js(200, server::script_js().context(Askama)?),
+        (true, "/") => html(200, server::homepage_html().context(Server)?).context(Cloudflare)?,
+        (true, "/v1/script.js") => {
+            js(200, server::script_js().context(Askama)?).context(Cloudflare)?
+        }
         (false, "/v1/decrypt") => {
             let text = cloudflare::request_text(&req).await.context(Cloudflare)?;
             let (status, body) = server::decrypt(&text).await;
-            html(status, body)
+            html(status, body).context(Cloudflare)?
         }
         (true, "/v1/encrypt") => {
             let (status, body) = server::encrypt(&url).context(Server)?;
-            html(status, body)
+            html(status, body).context(Cloudflare)?
         }
         (true, "/v1/show") => {
             let (status, body) = server::show_html(&url).context(Server)?;
-            html(status, body)
+            html(status, body).context(Cloudflare)?
         }
-        (true, "/favicon.ico") => serve_static("favicon.ico").expect("Missing a favicon"),
+        (true, "/favicon.ico") => serve_static(&url, "favicon.ico")?,
         (method, path) => {
-            let ores = (|| {
-                if !method {
-                    return None;
-                }
-                if !path.starts_with("/static/") {
-                    return None;
-                }
-                serve_static(&path[8..])
-            })();
-            ores.unwrap_or_else(|| html(404, format!("Not found: {}", path)))
+            if !method {
+                return Err(Error::NotFound {
+                    path: url.path().to_owned(),
+                });
+            }
+            if !path.starts_with("/static/") {
+                return Err(Error::NotFound {
+                    path: url.path().to_owned(),
+                });
+            }
+            serve_static(&url, &path[8..])?
         }
     })
 }
