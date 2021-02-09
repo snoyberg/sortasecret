@@ -106,7 +106,7 @@ pub fn worker_global_scope() -> Option<web_sys::ServiceWorkerGlobalScope> {
         .ok()
 }
 
-async fn site_verify<'a>(body: &VerifyRequest<'a>) -> Result<VerifyResponse, VerifyError> {
+async fn site_verify(body: &VerifyRequest<'_>) -> Result<VerifyResponse, VerifyError> {
     use web_sys::{Request, RequestInit, Response};
     let mut opts = RequestInit::new();
     opts.method("POST");

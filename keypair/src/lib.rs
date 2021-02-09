@@ -69,9 +69,7 @@ impl Keypair {
         let bytes = base16::decode(&hex)?;
         let mut key: [u8; 16] = [0; 16];
         if bytes.len() == 16 {
-            for i in 0..16 {
-                key[i] = bytes[i];
-            }
+            key[..16].clone_from_slice(&bytes[..16]);
             Ok(Keypair { key })
         } else {
             Err(Error::InvalidKeyLength(bytes.len()))
