@@ -36,7 +36,7 @@ web-sys = { version = "0.3.47", features = [
   'ServiceWorkerGlobalScope',
   'FormData',
 ]}
-rust-embed = "5.8"
+rust-embed = "6.3"
 mime_guess = "2"
 snafu = "0.6"
 
