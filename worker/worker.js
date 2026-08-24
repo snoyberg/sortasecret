@@ -1,13 +1,7 @@
-addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
-})
+import { respond_wrapper } from "./pkg/sortasecret.js";
 
-/**
- * Fetch and log a request
- * @param {Request} request
- */
-async function handleRequest(request) {
-    const { respond_wrapper } = wasm_bindgen;
-    await wasm_bindgen(wasm)
-    return await respond_wrapper(request)
-}
+export default {
+  async fetch(request) {
+    return respond_wrapper(request);
+  },
+};

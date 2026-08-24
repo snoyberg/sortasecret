@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sortasecret",
+  "main": "worker/worker.js",
+  "compatibility_date": "2026-08-24",
+  "account_id": "912f6b3f9e95d44a81552fb8b5a4ac86",
+  "workers_dev": false,
+  "route": {
+    "pattern": "*sortasecret.com/*",
+    "zone_name": "sortasecret.com"
+  },
+  "build": {
+    "command": "./scripts/build-worker.sh"
+  }
+}

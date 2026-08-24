@@ -4,7 +4,9 @@ extern crate wasm_bindgen;
 extern crate serde_derive;
 
 mod cloudflare;
-mod secrets;
+mod secrets {
+    include!(concat!(env!("OUT_DIR"), "/secrets.rs"));
+}
 mod server;
 mod utils;
 
