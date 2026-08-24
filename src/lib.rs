@@ -4,7 +4,6 @@ extern crate wasm_bindgen;
 extern crate serde_derive;
 
 mod cloudflare;
-mod secrets;
 mod server;
 mod utils;
 
@@ -67,8 +66,18 @@ impl Error {
 }
 
 #[wasm_bindgen]
-pub async fn respond_wrapper(req: web_sys::Request) -> Result<web_sys::Response, JsValue> {
-    respond(req)
+pub async fn respond_wrapper(
+    req: web_sys::Request,
+    recaptcha_secret: String,
+    recaptcha_site: String,
+    keypair: String,
+) -> Result<web_sys::Response, JsValue> {
+    let config = server::Config {
+        recaptcha_secret,
+        recaptcha_site,
+        keypair,
+    };
+    respond(req, config)
         .await
         .map(Ok)
         .unwrap_or_else(Error::into_response)
@@ -82,28 +91,30 @@ fn serve_static(url: &url::Url, name: &str) -> Result<web_sys::Response> {
     static_file(200, name, content.into()).context(Cloudflare)
 }
 
-async fn respond(req: web_sys::Request) -> Result<web_sys::Response> {
+async fn respond(req: web_sys::Request, config: server::Config) -> Result<web_sys::Response> {
     let url_string = req.url();
     let url: url::Url = url_string.parse().with_context(|| UrlParse {
         url: url_string.clone(),
     })?;
 
     Ok(match (req.method() == "GET", url.path()) {
-        (true, "/") => html(200, server::homepage_html().context(Server)?).context(Cloudflare)?,
+        (true, "/") => {
+            html(200, server::homepage_html(&config).context(Server)?).context(Cloudflare)?
+        }
         (true, "/v1/script.js") => {
-            js(200, server::script_js().context(Askama)?).context(Cloudflare)?
+            js(200, server::script_js(&config).context(Askama)?).context(Cloudflare)?
         }
         (false, "/v1/decrypt") => {
             let text = cloudflare::request_text(&req).await.context(Cloudflare)?;
-            let (status, body) = server::decrypt(&text).await;
+            let (status, body) = server::decrypt(&text, &config).await;
             html(status, body).context(Cloudflare)?
         }
         (true, "/v1/encrypt") => {
-            let (status, body) = server::encrypt(&url).context(Server)?;
+            let (status, body) = server::encrypt(&url, &config).context(Server)?;
             html(status, body).context(Cloudflare)?
         }
         (true, "/v1/show") => {
-            let (status, body) = server::show_html(&url).context(Server)?;
+            let (status, body) = server::show_html(&url, &config).context(Server)?;
             html(status, body).context(Cloudflare)?
         }
         (true, "/favicon.ico") => serve_static(&url, "favicon.ico")?,
