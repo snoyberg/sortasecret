@@ -5,10 +5,19 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 
-pub(crate) fn encrypt(url: &url::Url) -> Result<(u16, String), Box<dyn std::error::Error>> {
+pub(crate) struct Config {
+    pub recaptcha_secret: String,
+    pub recaptcha_site: String,
+    pub keypair: String,
+}
+
+pub(crate) fn encrypt(
+    url: &url::Url,
+    config: &Config,
+) -> Result<(u16, String), Box<dyn std::error::Error>> {
     match EncryptRequest::from_url(url) {
         Some(encreq) => {
-            let keypair = make_keypair()?;
+            let keypair = make_keypair(config)?;
             let encrypted = keypair.encrypt(&encreq.secret)?;
             Ok((200, encrypted))
         }
@@ -16,12 +25,15 @@ pub(crate) fn encrypt(url: &url::Url) -> Result<(u16, String), Box<dyn std::erro
     }
 }
 
-pub(crate) fn show_html(url: &url::Url) -> Result<(u16, String), Box<dyn std::error::Error>> {
+pub(crate) fn show_html(
+    url: &url::Url,
+    config: &Config,
+) -> Result<(u16, String), Box<dyn std::error::Error>> {
     match EncryptRequest::from_url(url) {
         // Check that the secret is actually valid. This also prevents an
         // XSS attack, since only simple hex values will be allowed
         // through.
-        Some(encreq) => match make_keypair()?.decrypt(&encreq.secret) {
+        Some(encreq) => match make_keypair(config)?.decrypt(&encreq.secret) {
             Ok(_) => {
                 let html = Homepage {
                     secret: encreq.secret,
@@ -128,13 +140,13 @@ async fn site_verify(body: &VerifyRequest<'_>) -> Result<VerifyResponse, VerifyE
     Ok(verres)
 }
 
-pub(crate) async fn decrypt(body: &str) -> (u16, String) {
+pub(crate) async fn decrypt(body: &str, config: &Config) -> (u16, String) {
     let decreq: DecryptRequest = match serde_json::from_str(body) {
         Ok(x) => x,
         Err(_) => return (400, "Invalid request".to_string()),
     };
     let req = VerifyRequest {
-        secret: super::secrets::RECAPTCHA_SECRET,
+        secret: &config.recaptcha_secret,
         response: decreq.token,
     };
     let secrets = decreq.secrets;
@@ -147,7 +159,7 @@ pub(crate) async fn decrypt(body: &str) -> (u16, String) {
                 let decrypted = secrets
                     .into_iter()
                     .map(|secret| {
-                        let cleartext = match make_keypair().unwrap().decrypt(&secret) {
+                        let cleartext = match make_keypair(config).unwrap().decrypt(&secret) {
                             Err(e) => format!("Could not decrypt secret: {:?}", e),
                             Ok(vec) => match String::from_utf8(vec) {
                                 Ok(s) => s,
@@ -168,12 +180,12 @@ pub(crate) async fn decrypt(body: &str) -> (u16, String) {
     }
 }
 
-fn make_keypair() -> Result<keypair::Keypair, keypair::Error> {
-    keypair::Keypair::decode(super::secrets::KEYPAIR)
+fn make_keypair(config: &Config) -> Result<keypair::Keypair, keypair::Error> {
+    keypair::Keypair::decode(&config.keypair)
 }
 
-pub(crate) fn homepage_html() -> Result<String, Box<dyn std::error::Error>> {
-    let keypair = make_keypair()?;
+pub(crate) fn homepage_html(config: &Config) -> Result<String, Box<dyn std::error::Error>> {
+    let keypair = make_keypair(config)?;
     Ok(make_homepage(&keypair)?)
 }
 
@@ -196,9 +208,9 @@ struct Script<'a> {
     site: &'a str,
 }
 
-pub(crate) fn script_js() -> Result<String, askama::Error> {
+pub(crate) fn script_js(config: &Config) -> Result<String, askama::Error> {
     Script {
-        site: super::secrets::RECAPTCHA_SITE,
+        site: &config.recaptcha_site,
     }
     .render()
 }
