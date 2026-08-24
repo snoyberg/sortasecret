@@ -1,153 +1,136 @@
-<!DOCTYPE html>
-<html lang="en" class="no-js">
+<!doctype html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Meta -->
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Sorta Secret — Put semi-secret text behind reCAPTCHA</title>
+    <meta name="description" content="Sorta Secret requires a valid reCAPTCHA token before revealing semi-secret text such as an email address.">
+    <meta name="theme-color" content="#102a43">
 
-    <title>Sorta Secret - Serverless Rust demo</title>
-
-    
-
-    <meta name="twitter:site" content="@FPComplete">
-    <meta name="twitter:creator" content="@FPComplete">
-    <meta name="og:site_name" content="Sorta Secret">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Sorta Secret">
+    <meta property="og:title" content="Sorta Secret">
+    <meta property="og:description" content="A small, open-source tool that puts a reCAPTCHA token check in front of semi-secret text.">
+    <meta property="og:url" content="https://sortasecret.com/">
     <meta name="twitter:card" content="summary">
 
-    
-    <meta name="og:title" content="FP Complete Technology Homepage">
-    
-
-    <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">  
-    <script src="https://kit.fontawesome.com/ed5ab29d5a.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" type="text/css" href="/static/style.css">
-    <link rel="icon" href="/static/favicon.png">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="canonical" href="https://sortasecret.com/">
+    <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
     <script src="/v1/script.js"></script>
-
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-36928035-7"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'UA-36928035-7');
-    </script>
-
-    
-    
   </head>
 
   <body>
-    <header class="inner-page">
-      <nav class="js-navbar-scroll navbar fixed-top navbar-expand-lg">
-        <div class="container-fluid">
-          <a class="navbar-brand" href="/">
-            <img src="/static/logo.png" alt="FP Complete">
-          </a>
-          <button
-              class="navbar-toggler" type="button"
-              data-toggle="collapse"
-              data-target="#navbarTogglerDemo"
+    <a class="skip-link" href="#main-content">Skip to content</a>
 
-              aria-controls="navbarTogglerDemo"
-              aria-expanded="false"
-              aria-label="Toggle navigation">
-            <i class="fas fa-bars"></i>
-          </button>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" aria-label="Sorta Secret home">
+          <img src="/static/mark.svg" width="38" height="38" alt="">
+          <span>Sorta Secret</span>
+        </a>
+        <nav aria-label="Primary navigation">
+          <a href="#how-it-works">How it works</a>
+          <a href="#use-it">Use the API</a>
+          <a href="https://github.com/snoyberg/sortasecret">Source</a>
+        </nav>
+      </div>
+    </header>
 
-          <div class="collapse navbar-collapse onCollapse" id="navbarTogglerDemo"> 
-            <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
-              <li class="nav-item mr-4 mb-2 mb-lg-0">
-                <a class="nav-link" href="https://www.fpcomplete.com/blog/">Blog</a>
-              </li>
-              <li class="nav-item mr-4 mb-2 mb-lg-0">
-                <a class="nav-link" href="https://www.fpcomplete.com/rust/">Rust</a>
-              </li>
-              <li class="nav-item mr-4 mb-2 mb-lg-0">
-                <a class="nav-link" href="https://www.fpcomplete.com/devops/">DevOps</a>
-              </li>
-              <li class="nav-item mr-4 mb-2 mb-lg-0">
-                <a class="nav-link" href="https://www.fpcomplete.com/haskell/">Haskell</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-
-	  <section class="wt-section bg-gray text-center inner-page-header" style="padding-top:0.5rem;padding-bottom:0.5rem"> 
-        <div class="container">
-          <div class="row justify-content-md-center align-items-center text-white py-lg-5">
-            <div class="col-md-7">
-              <div class="text-center">
-                <h1 class="display-sm-4 display-lg-3">Sorta Secret</h1>
-                <p class="h6 text-uppercase wt-letter-spacing-sm mb-0">Demonstrating Serverless Rust using WASM and Cloudflare Workers</p>
-              </div>
+    <main id="main-content">
+      <section class="hero">
+        <div class="shell hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">A small privacy utility</p>
+            <h1>Let people read it.<br>Give scrapers a speed bump.</h1>
+            <p class="lede">Sorta Secret requires a valid reCAPTCHA token before revealing semi-secret text—useful for sharing an email address without publishing it as easy-to-collect plaintext.</p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#try-it">Try the demo</a>
+              <a class="button button-secondary" href="#how-it-works">Understand the limits</a>
             </div>
+          </div>
+
+          <div class="utility-card" id="try-it" aria-labelledby="demo-title">
+            <div class="utility-heading">
+              <div>
+                <p class="eyebrow">Live demo</p>
+                <h2 id="demo-title">A message behind the check</h2>
+              </div>
+              <span class="status-badge">Token gated</span>
+            </div>
+            <div class="secret-field" aria-live="polite" aria-atomic="true">
+              <span class="secret-label">Protected text</span>
+              <strong id="sortasecret-demo-secret" data-sortasecret="{{ secret }}">Hidden until the token check</strong>
+            </div>
+            <button class="button button-primary reveal-button" id="sortasecret-demo-button" type="button" onclick="sortasecret()" aria-describedby="demo-note">
+              Reveal the message
+            </button>
+            <p class="fine-print" id="demo-note">The service checks for a valid Google reCAPTCHA token.</p>
           </div>
         </div>
       </section>
-    </header>
 
-    <main role="main">
-      <section class="wt-section bg-light" style="padding-top:1rem">
-        <div class="container">
-          <div class="alert alert-info" style="margin-top:0.5em;margin-bottom:2em">
-            <button class="btn btn-info" onclick="sortasecret()" style="margin-right: 1em">Show me the secret</button>
-            <b data-sortasecret="{{ secret }}">Not showing you the secret yet...</b>
+      <section class="section" id="how-it-works">
+        <div class="shell content-grid">
+          <div>
+            <p class="eyebrow">How it works</p>
+            <h2>A speed bump for scrapers, not an access-control system.</h2>
           </div>
+          <div class="prose">
+            <p>Sorta Secret encrypts a short piece of text for embedding on a public page. When a visitor asks to reveal it, the service checks whether the submitted reCAPTCHA token is valid before returning the plaintext.</p>
+            <p>That adds friction to automated collection, but it does not make the text private. The current service does not evaluate reCAPTCHA v3 score, action, or hostname, and a determined scraper may still succeed. Do not use Sorta Secret for passwords, credentials, private keys, or information that needs authorization.</p>
+          </div>
+        </div>
 
-          <h2>What is this?</h2>
+        <div class="shell steps" aria-label="Three steps">
+          <article>
+            <span class="step-number" aria-hidden="true">01</span>
+            <h3>Encrypt</h3>
+            <p>Send a short value to the existing encrypt endpoint and receive an opaque value.</p>
+          </article>
+          <article>
+            <span class="step-number" aria-hidden="true">02</span>
+            <h3>Embed</h3>
+            <p>Place that value in your page and load the Sorta Secret script.</p>
+          </article>
+          <article>
+            <span class="step-number" aria-hidden="true">03</span>
+            <h3>Reveal</h3>
+            <p>A visitor's browser obtains a reCAPTCHA token before the service returns the text.</p>
+          </article>
+        </div>
+      </section>
 
-          <p>Sorta Secret is a simple web app that helps with blocking bots and web scrapers from reading semi-secret information. A great use case&mdash;and the reason this came into existence&mdash;is to allow real people to get someone's email address from a webpage without encouraging spammers.</p>
-
-          <p><i>If you're familiar with it, this is similar to what Mailhide did before it was turned offline.</i></p>
-
-          <p>This app is written in Rust, and is an <a href="https://www.fpcomplete.com/rust">FP Complete demonstration</a> of using Cloudflare Workers, Rust, and Web Assembly to create globally distributed, scalable, low maintenance, and robust applications using a "serverless" architecture.</p>
-
-          <p>Want to learn more? Read our <a href="https://www.fpcomplete.com/blog/serverless-rust-wasm-cloudflare/">Serverless Rust using WASM and Cloudflare</a> blog post.</p>
-
-          <p>Source code is <a href="https://github.com/snoyberg/sortasecret">available on Github</a>.</p>
-
-          <p>Read more on the <a href="https://www.fpcomplete.com/blog/">FP Complete blog</a>. You can also sign up for our <a href="https://www.fpcomplete.com/rust/signup">Rust</a> and <a href="https://www.fpcomplete.com/devops/signup">DevOps</a> mailing lists.</p>
+      <section class="section section-tinted" id="use-it">
+        <div class="shell content-grid">
+          <div>
+            <p class="eyebrow">Use the API</p>
+            <h2>The original routes remain available.</h2>
+          </div>
+          <div class="prose">
+            <p>Create an encrypted value with <code>/v1/encrypt?secret=…</code>, or open a complete reveal page with <code>/v1/show?secret=…</code> using that encrypted value.</p>
+            <p>Because the create endpoint accepts plaintext in the URL, browsers, proxies, and logs may retain it. Use only text that fits the semi-secret threat model described above.</p>
+            <p><a href="https://github.com/snoyberg/sortasecret#sortasecret">Read the integration notes on GitHub <span aria-hidden="true">→</span></a></p>
+          </div>
         </div>
       </section>
     </main>
 
-    <footer class="bg-dark py-5">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-8 text-center text-md-left mb-3 mb-md-0">
-            <small>
-              &copy; 2019-2021 FP Complete Corp.
-            </small>
-          </div>
-
-          <div class="col-md-4 align-self-center">
-            <ul class="list-inline text-center text-md-right mb-0">
-              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="LinkedIn">
-                <a target="_blank" href="https://www.linkedin.com/company/fpcomplete">
-                  <i class="fab fa-linkedin"></i>
-                </a>
-              </li>
-              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="Twitter">
-                <a target="_blank" href="https://twitter.com/FPComplete">
-                  <i class="fab fa-twitter"></i>
-                </a>
-              </li>
-              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="Github">
-                <a target="_blank" href="https://github.com/fpco">
-                  <i class="fab fa-github"></i>
-                </a>
-              </li>
-              <li class="list-inline-item mx-2" data-toggle="tooltip" data-placement="top" title="YouTube">
-                <a target="_blank" href="https://www.youtube.com/user/FPComplete">
-                  <i class="fab fa-youtube"></i>
-                </a>
-              </li>
-            </ul>
-          </div>
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <div>
+          <a class="brand footer-brand" href="/">
+            <img src="/static/mark.svg" width="32" height="32" alt="">
+            <span>Sorta Secret</span>
+          </a>
+          <p>A focused open-source utility by <a href="https://www.snoyman.com/">Michael Snoyman</a>.</p>
+        </div>
+        <div class="footer-links">
+          <a href="https://github.com/snoyberg/sortasecret">GitHub</a>
+          <a href="https://github.com/snoyberg/sortasecret/blob/master/LICENSE">MIT License</a>
         </div>
       </div>
     </footer>
