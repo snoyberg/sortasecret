@@ -1,6 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">Sorta Secret mark</title>
-  <rect width="64" height="64" rx="14" fill="#102a43"/>
-  <path d="M17 21.5 32 13l15 8.5v17L32 47l-15-8.5z" fill="none" stroke="#2f9e9e" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M25 27.5c0-3.1 2.7-5.5 7-5.5 3.1 0 5.7 1.2 7.3 3.1M39 36.5c0 3.1-2.7 5.5-7 5.5-3.1 0-5.7-1.2-7.3-3.1M25.5 28l13 8" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Michael Snoyman</title>
+  <desc>Michael Snoyman S monogram</desc>
+  <rect width="512" height="512" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="218" fill="#f4f7f8"/>
+  <path d="M92 228a166 166 0 0 1 328 0M420 284A166 166 0 0 1 92 284" fill="none" stroke="#087f8c" stroke-width="28"/>
+  <rect x="69" y="238" width="46" height="36" fill="#d96c2f"/>
+  <rect x="397" y="238" width="46" height="36" fill="#d96c2f"/>
+  <text x="256" y="368" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="500" fill="#17212b">S</text>
 </svg>
