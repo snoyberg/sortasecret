@@ -7,4 +7,6 @@ src/secrets.rs
 worker/pkg/
 target/worker-build/
 node_modules/
+.dev.vars*
+.env*
 /worker/generated/

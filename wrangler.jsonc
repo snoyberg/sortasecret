@@ -5,6 +5,13 @@
   "compatibility_date": "2026-08-24",
   "account_id": "912f6b3f9e95d44a81552fb8b5a4ac86",
   "workers_dev": false,
+  "secrets": {
+    "required": [
+      "SORTASECRET_RECAPTCHA_SECRET",
+      "SORTASECRET_RECAPTCHA_SITE",
+      "SORTASECRET_KEYPAIR"
+    ]
+  },
   "route": {
     "pattern": "*sortasecret.com/*",
     "zone_name": "sortasecret.com"
