@@ -2,10 +2,6 @@
 
 These instructions apply to the entire repository.
 
-## General agent collaboration
-
-For Michael Snoyman's general agent-collaboration, engineering, and review workflow guidance, consult [P2P Agents](https://github.com/snoyberg/p2p-agents/blob/master/AGENTS.md). Treat it as shared guidance; this file is authoritative for Sorta Secret-specific requirements and takes precedence where it intentionally differs.
-
 ## Product priorities
 
 - Preserve the core purpose: sharing sensitive text more safely than sending plaintext through chat or email.
